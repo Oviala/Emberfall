@@ -5634,6 +5634,43 @@ body.reduce-motion *::after {
   .run-tree-glyph .skill-icon { width: 20px; height: 20px; }
 }
 
+/* 手机端专属 HUD：血条沉到底部，左侧固定摇杆 */
+@media (max-width: 720px) {
+  .hud-bottom {
+    flex-direction: column-reverse;
+    gap: 5px;
+  }
+
+  .hud-left {
+    order: 0;
+    width: 100%;
+  }
+
+  .hud-right {
+    order: 1;
+  }
+
+  .player-bars {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .bar.hp,
+  .bar.xp {
+    height: 13px;
+    flex: 1 1 50%;
+  }
+
+  .hud-status:empty {
+    display: none;
+  }
+
+  .hud-hint {
+    max-width: calc(100% - 8px);
+    line-height: 1.5;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -5864,7 +5901,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:37:45.095Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:43:11.392Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -10436,20 +10473,40 @@ function getJoystickInput() {
   return { x: (j.dx / len) * (clampLen / max), y: (j.dy / len) * (clampLen / max) };
 }
 
+function isTouchLayout() {
+  return typeof window !== 'undefined' && (
+    window.matchMedia?.('(max-width: 720px)').matches ||
+    window.matchMedia?.('(pointer: coarse)').matches
+  );
+}
+
+function fixedJoystickBase() {
+  return { x: 82, y: Math.max(160, world.height - 104) };
+}
+
 function bindJoystick() {
   const canvas = world.canvas;
   const down = (event) => {
     const j = world.joystick;
     if (j.active) return;
+    const rect = canvas.getBoundingClientRect();
+    const localX = event.clientX - rect.left;
+    const localY = event.clientY - rect.top;
+    if (isTouchLayout()) {
+      const base = fixedJoystickBase();
+      if (Math.hypot(localX - base.x, localY - base.y) > 118) return;
+      j.sx = base.x;
+      j.sy = base.y;
+    } else {
+      j.sx = localX;
+      j.sy = localY;
+    }
     j.active = true;
     j.id = event.pointerId;
-    const rect = canvas.getBoundingClientRect();
-    j.sx = event.clientX - rect.left;
-    j.sy = event.clientY - rect.top;
-    j.x = j.sx;
-    j.y = j.sy;
-    j.dx = 0;
-    j.dy = 0;
+    j.x = localX;
+    j.y = localY;
+    j.dx = localX - j.sx;
+    j.dy = localY - j.sy;
     try {
       canvas.setPointerCapture?.(event.pointerId);
     } catch {
@@ -11181,10 +11238,16 @@ function drawFx(c, dt) {
 
 function drawJoystick(c) {
   const j = world.joystick;
-  if (!j.active) return;
+  const touch = isTouchLayout();
+  if (!j.active && !touch) return;
   const max = 58;
-  let dx = j.dx;
-  let dy = j.dy;
+  let dx = j.active ? j.dx : 0;
+  let dy = j.active ? j.dy : 0;
+  if (touch && !j.active) {
+    const base = fixedJoystickBase();
+    j.sx = base.x;
+    j.sy = base.y;
+  }
   const len = Math.hypot(dx, dy);
   if (len > max) {
     dx = (dx / len) * max;
@@ -11206,6 +11269,13 @@ function drawJoystick(c) {
   c.beginPath();
   c.arc(j.sx + dx, j.sy + dy, 20, 0, Math.PI * 2);
   c.fill();
+  if (touch) {
+    c.globalAlpha = 0.7;
+    c.fillStyle = 'rgba(255,230,200,0.8)';
+    c.font = '9px "PingFang SC", sans-serif';
+    c.textAlign = 'center';
+    c.fillText('移动', j.sx, j.sy + 82);
+  }
   c.restore();
 }
 
@@ -11651,7 +11721,10 @@ function setPauseLabel(ctx) {
           : run.autoSkills
             ? '移动 · 自动射击 / 弹幕 · 点击技能看详情 · T 星图 · Shift 冲刺'
             : '移动 · 点击技能看详情 · 1–6 手动施法 · T 星图 · Shift 冲刺 · 空格燃尽';
-  if (delveEls.hint) delveEls.hint.textContent = hint;
+  if (delveEls.hint) {
+    const mobile = window.matchMedia?.('(max-width: 720px)').matches || window.matchMedia?.('(pointer: coarse)').matches;
+    delveEls.hint.textContent = mobile ? '按住左侧摇杆移动 · 点技能看详情 · 右下冲刺/燃尽' : hint;
+  }
 }
 
 // ───────────────────────── 侧栏 ─────────────────────────
