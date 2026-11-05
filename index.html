@@ -5956,7 +5956,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:48:26.725Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T19:02:34.416Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -5979,7 +5979,11 @@ const BAL = {
     moveSpeed: 2.2
   },
   armorK: 45,
-  baseRegen: 0.004,
+  baseRegen: 0,
+  healPulse: {
+    interval: 2,
+    pct: 0.01
+  },
   player: {
     radius: 17,
     speed: 225,
@@ -7685,6 +7689,7 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     projectiles: [],
     enemyShots: [],
     zones: [],
+    healPulseTimer: BAL.healPulse.interval,
     orbs: [],
     nextId: 1,
     cardCounts: {},
@@ -9509,6 +9514,11 @@ function stepRun(run, dt = STEP) {
   updateOrbs(run, step, events);
 
   if (stats.regen > 0) healPlayer(run, run.maxHp * stats.regen * step, events, true);
+  run.healPulseTimer = (run.healPulseTimer ?? BAL.healPulse.interval) - step;
+  if (run.healPulseTimer <= 0) {
+    run.healPulseTimer += BAL.healPulse.interval;
+    healPlayer(run, run.maxHp * BAL.healPulse.pct, events, false);
+  }
   if (run.ult.active <= 0) addUltCharge(run, BAL.ult.perSecond * stats.ultCharge * step);
   run.rngState = run._rng.state;
   return events;
