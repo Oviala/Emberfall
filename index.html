@@ -36,8 +36,8 @@
   --radius: 18px;
   --radius-sm: 12px;
   --radius-xs: 9px;
-  --font-display: "Songti SC", "Noto Serif SC", "Source Han Serif SC", Georgia, "Times New Roman", serif;
-  --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-ui);
   --font-num: "SF Mono", "JetBrains Mono", ui-monospace, "Menlo", monospace;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
 }
@@ -5581,6 +5581,59 @@ body.reduce-motion *::after {
   .run-tree-name { font-size: 7px; max-width: 48px; }
 }
 
+/* v5 技能图标：SVG 徽记统一尺寸与描边 */
+.skill-glyph {
+  display: grid;
+  place-items: center;
+}
+
+.skill-glyph .skill-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.skill-btn.role-rapid .skill-icon { width: 25px; height: 25px; }
+.skill-btn.role-heavy .skill-icon { width: 29px; height: 29px; }
+
+.ability-detail-glyph .skill-icon {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+.draft-glyph .skill-icon,
+.relic-choice-glyph .skill-icon {
+  width: 30px;
+  height: 30px;
+  display: block;
+}
+
+.codex-glyph .skill-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.run-tree-glyph .skill-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.run-tree-node.kind-root .run-tree-glyph .skill-icon,
+.run-tree-node.kind-advanced .run-tree-glyph .skill-icon {
+  width: 25px;
+  height: 25px;
+}
+
+@media (max-width: 760px) {
+  .skill-glyph .skill-icon { width: 24px; height: 24px; }
+  .skill-btn.role-rapid .skill-icon { width: 22px; height: 22px; }
+  .skill-btn.role-heavy .skill-icon { width: 26px; height: 26px; }
+  .run-tree-glyph .skill-icon { width: 20px; height: 20px; }
+}
+
 </style>
 </head>
 <body>
@@ -5769,7 +5822,7 @@ body.reduce-motion *::after {
       <header class="run-tree-head">
         <div>
           <p class="eyebrow">CONSTELLATION · 46 NODES · READ ONLY</p>
-          <h2>技能星图 · 15 条弹幕分支</h2>
+          <h2>技能星图 · 14 条弹幕分支</h2>
         </div>
         <div class="run-tree-meta">
           <span class="tag subtle">已点亮 <b id="run-tree-owned">1/46</b></span>
@@ -5779,7 +5832,7 @@ body.reduce-motion *::after {
       </header>
       <div class="run-tree-controls">
         <label class="run-tree-branch-label">分支
-          <select id="run-tree-branch" aria-label="聚焦技能分支"><option value="all">全部 15 条分支</option></select>
+          <select id="run-tree-branch" aria-label="聚焦技能分支"><option value="all">全部 14 条分支</option></select>
         </label>
         <div class="run-tree-zoom" aria-label="星图缩放">
           <button class="icon-btn sm" id="run-tree-zoom-out" aria-label="缩小">−</button>
@@ -5799,7 +5852,7 @@ body.reduce-motion *::after {
         <aside class="run-tree-tip panel" id="run-tree-tip">
           <p class="eyebrow">NODE DETAILS</p>
           <h3 id="run-tree-tip-name">选择一个技能节点</h3>
-          <p id="run-tree-tip-desc">46 个节点只读展示；所有节点都在升级三选一中获得。</p>
+          <p id="run-tree-tip-desc">43 个节点只读展示；所有节点都在升级三选一中获得。</p>
           <div class="run-tree-legend"><span class="owned">● 已点亮</span><span class="available">◌ 可选取</span><span class="locked">◇ 锁定</span></div>
           <div id="run-tree-tip-effects"></div>
           <p class="run-tree-hint">这里不能购买或加点。进阶需对应技能先获得 3 次数值强化。</p>
@@ -5811,7 +5864,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T17:15:10.447Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:16:00.567Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6778,123 +6831,116 @@ function buildRunMods(run) {
 }
 
 // ── js/data/abilities.js ──
-// v4 主动技能：6 个速射、7 个普通、2 个重型，另有 3 个局内合成技能。
-// behavior 是稳定的引擎/图鉴标识；element 为 null 表示纯物理，不附加元素印记。
+// v5 主动技能：6 速射、7 普通、2 重型，另有 3 个局内合成。
+// behavior 是稳定的引擎行为标识；本版重做了全部技能身份、图标、定位与数值。
 
 const ABILITIES = [
   {
-    id: 'embergun', name: '烬火机炮', glyph: '炮', cd: 0.7, role: 'rapid', behavior: 'gunFan',
-    element: 'fire', color: '#ff7d47', type: '速射 · 扇形机炮',
-    desc: (ap) => `向最近敌人扫射 6 枚烬弹（每枚 ${Math.round(18 * ap)}% 攻击力），低伤害、高频率，快速清理怪潮并附加灼烧。`,
-    flavor: '把余烬压进枪膛，深渊就有了枪声。'
+    id: 'embergun', name: '赤鸦', glyph: '鸦', cd: 0.68, role: 'rapid', behavior: 'gunFan',
+    element: 'fire', color: '#ff7d47', type: '速射 · 鸦火扇射',
+    desc: (ap) => `鸦群般的六枚赤火弹向前扇射（每枚 ${Math.round(17 * ap)}% 攻击力），单发低、频率极高，负责压住怪潮。`,
+    flavor: '第一只鸦落下时，火已经烧起来了。'
   },
   {
-    id: 'frost', name: '霜棱连射', glyph: '霜', cd: 0.9, role: 'rapid', behavior: 'piercingFan',
-    element: 'ice', color: '#66c8ff', type: '速射 · 穿透冰棱',
-    desc: (ap) => `扇形射出 7 枚穿透冰棱（每枚 ${Math.round(14 * ap)}% 攻击力），命中减速并附加霜寒。`,
-    flavor: '呼吸结霜的时候，深渊也慢了下来。'
+    id: 'frost', name: '白羽', glyph: '羽', cd: 0.88, role: 'rapid', behavior: 'piercingFan',
+    element: 'ice', color: '#66c8ff', type: '速射 · 冰羽穿透',
+    desc: (ap) => `射出七枚可穿透的霜白羽刃（每枚 ${Math.round(13 * ap)}% 攻击力），命中减速并附加霜寒。`,
+    flavor: '羽毛很轻，落在骨头上却很重。'
   },
   {
-    id: 'chain', name: '电弧脉冲', glyph: '雷', cd: 1.0, role: 'rapid', behavior: 'chainPulse',
-    element: 'shock', color: '#ffd166', type: '速射 · 连锁电弧',
-    desc: (ap) => `电弧在 3 个敌人间跳跃（每次 ${Math.round(32 * ap)}%），并放出 4 枚追踪电火花（每枚 ${Math.round(12 * ap)}%），附加感电。`,
-    flavor: '雷不会只劈一次。'
+    id: 'chain', name: '雷鼓', glyph: '鼓', cd: 0.96, role: 'rapid', behavior: 'chainPulse',
+    element: 'shock', color: '#ffd166', type: '速射 · 鼓点雷弧',
+    desc: (ap) => `敲响雷鼓，电弧在 3 个敌人间跳跃（${Math.round(30 * ap)}%），并甩出 4 枚追踪电火花。`,
+    flavor: '鼓点一响，整片深渊都要跟着抖。'
   },
   {
-    id: 'voidrift', name: '虚空飞弹', glyph: '虚', cd: 1.2, role: 'rapid', behavior: 'homingMissiles',
-    element: 'void', color: '#b48cff', type: '速射 · 追踪飞弹',
-    desc: (ap) => `释放 6 枚追踪虚空飞弹（每枚 ${Math.round(20 * ap)}%），小范围爆裂、轻微牵引并附加侵蚀。`,
-    flavor: '深渊吸了一口气，于是群星迷了路。'
+    id: 'voidrift', name: '萤火', glyph: '萤', cd: 1.12, role: 'rapid', behavior: 'homingMissiles',
+    element: 'void', color: '#b48cff', type: '速射 · 追踪萤弹',
+    desc: (ap) => `释放六枚缓慢追踪的虚空萤火（每枚 ${Math.round(18 * ap)}%），触敌后小范围爆裂并附加侵蚀。`,
+    flavor: '它们不是在飞，是在寻找归处。'
   },
   {
-    id: 'starshield', name: '星屑环绕', glyph: '星', cd: 1.3, role: 'rapid', behavior: 'orbitShield',
-    element: 'void', color: '#c08cff', type: '速射 · 环绕 / 护盾',
-    desc: (ap) => `获得最大生命 ${Math.round(4 * ap)}% 的护盾，召出 4 颗虚空星屑环绕 4.5 秒（每颗 ${Math.round(18 * ap)}% 攻击力），附加侵蚀。`,
-    flavor: '星光编成的墙，也会主动撞向敌人。'
+    id: 'starshield', name: '星纱', glyph: '纱', cd: 1.24, role: 'rapid', behavior: 'orbitShield',
+    element: 'void', color: '#c08cff', type: '速射 · 环绕星纱',
+    desc: (ap) => `织出薄薄一层护盾，召出 4 颗环绕星屑（每颗 ${Math.round(16 * ap)}%），持续切割靠近的敌人。`,
+    flavor: '最轻的纱，替最重的心挡刀。'
   },
   {
-    id: 'bloodrite', name: '血刃回旋', glyph: '血', cd: 1.4, role: 'rapid', behavior: 'boomerangBlades',
+    id: 'bloodrite', name: '回刃', glyph: '刃', cd: 1.34, role: 'rapid', behavior: 'boomerangBlades',
     element: null, physical: true, color: '#ff6b6b', type: '速射 · 物理回旋刃',
-    desc: (ap) => `消耗 3% 当前生命，掷出 3 把往返血刃（每把 ${Math.round(34 * ap)}% 攻击力），穿透敌人并带回少量生命；纯物理，不附加元素。`,
-    flavor: '付出的，会沿着原路回来。'
+    desc: (ap) => `消耗少量生命掷出 3 把回旋血刃（每把 ${Math.round(32 * ap)}%），穿透敌人后带回生命；不附加元素。`,
+    flavor: '扔出去的东西，总要还回来。'
   },
   {
-    id: 'meteor', name: '陨火天坠', glyph: '陨', cd: 4.5, role: 'normal', behavior: 'targetedMeteors',
-    element: 'fire', color: '#ff7d47', type: '普通 · 延迟落点范围',
-    desc: (ap) => `标记敌人最密集处，连续砸下 3 颗陨星（每颗 ${Math.round(110 * ap)}% 攻击力范围伤害），落点彼此错开并附加灼烧。`,
-    flavor: '从天而降的，通常不是雨。'
+    id: 'meteor', name: '天火', glyph: '火', cd: 4.4, role: 'normal', behavior: 'targetedMeteors',
+    element: 'fire', color: '#ff7d47', type: '普通 · 延迟坠火',
+    desc: (ap) => `锁定敌群，连续砸下 3 颗天火（每颗 ${Math.round(108 * ap)}% 范围伤害），落点彼此错开并附加灼烧。`,
+    flavor: '天没有发怒，只是把火松开了。'
   },
   {
-    id: 'sunbeam', name: '阳炎射线', glyph: '曜', cd: 5.5, role: 'normal', behavior: 'piercingBeam',
-    element: 'fire', color: '#ffcf6b', type: '普通 · 直线穿透',
-    desc: (ap) => `向最近的敌人射出一道 44 像素宽、780 像素长的穿透光束，造成 ${Math.round(280 * ap)}% 攻击力伤害并附加灼烧。`,
-    flavor: '太阳没有耐心瞄准。'
+    id: 'sunbeam', name: '日矛', glyph: '矛', cd: 5.4, role: 'normal', behavior: 'piercingBeam',
+    element: 'fire', color: '#ffcf6b', type: '普通 · 贯穿光矛',
+    desc: (ap) => `把日光压成一杆长矛，向前贯穿 780 像素，造成 ${Math.round(280 * ap)}% 伤害并附加灼烧。`,
+    flavor: '太阳投出的矛，从不收回。'
   },
   {
-    id: 'stormfield', name: '雷暴领域', glyph: '云', cd: 6.5, role: 'normal', behavior: 'stormZone',
-    element: 'shock', color: '#9fb6ff', type: '普通 · 定点持续领域',
-    desc: (ap) => `在敌人最密集处降下雷云，5 秒内每 0.45 秒电击范围内敌人（每次 ${Math.round(45 * ap)}% 攻击力），附加感电。`,
-    flavor: '云层里有一整支军队。'
+    id: 'stormfield', name: '雷牢', glyph: '牢', cd: 6.4, role: 'normal', behavior: 'thunderCage',
+    element: 'shock', color: '#9fb6ff', type: '普通 · 定点雷牢',
+    desc: (ap) => `在敌群最密处落下一座雷牢，落点敌人被定身 1.2 秒；5 秒内每 0.45 秒电击范围内敌人（每次 ${Math.round(40 * ap)}%）。`,
+    flavor: '笼子是用雷做的，钥匙也是。'
   },
   {
-    id: 'thunderbrand', name: '雷引', glyph: '引', cd: 7, role: 'normal', behavior: 'basicEnchantment',
-    element: 'shock', color: '#ffe08a', type: '普通 · 普攻附魔 / 增益',
-    desc: (ap) => `立即连锁电击 4 个目标，随后 6 秒内普攻伤害提高 ${Math.round(35 * ap)}%、攻速提高 35%，命中向 3 个附近敌人弹射 ${Math.round(55 * ap)}% 伤害。`,
-    flavor: '把雷缠在箭上，然后松手。'
+    id: 'thunderbrand', name: '雷印', glyph: '印', cd: 6.8, role: 'normal', behavior: 'basicEnchantment',
+    element: 'shock', color: '#ffe08a', type: '普通 · 普攻附魔',
+    desc: (ap) => `在武器上烙下雷印：立即连锁 4 个目标，随后 6 秒普攻增伤 ${Math.round(35 * ap)}%、攻速提升，并弹射额外目标。`,
+    flavor: '盖了印的东西，就归雷管了。'
   },
   {
-    id: 'icenova', name: '冰晶新星', glyph: '晶', cd: 7, role: 'normal', behavior: 'iceNova',
-    element: 'ice', color: '#8edcff', type: '普通 · 新星冻结',
-    desc: (ap) => `以自身为中心爆发冰晶新星，造成 ${Math.round(210 * ap)}% 范围伤害、长时间减速，并射出 12 枚穿透冰晶，附加霜寒。`,
-    flavor: '新星熄灭之前，先冻结了整个冬夜。'
+    id: 'icenova', name: '冰墓', glyph: '墓', cd: 7, role: 'normal', behavior: 'iceNova',
+    element: 'ice', color: '#8edcff', type: '普通 · 冰晶新星',
+    desc: (ap) => `以自身为碑心爆发冰墓新星，造成 ${Math.round(205 * ap)}% 范围伤害，长时间减速，并射出 12 枚穿透冰晶。`,
+    flavor: '先立碑，再埋葬。'
   },
   {
-    id: 'lavapool', name: '熔岩地脉', glyph: '熔', cd: 8, role: 'normal', behavior: 'lavaZone',
-    element: 'fire', color: '#ff8b42', type: '普通 · 熔岩地面',
-    desc: (ap) => `撕裂敌人脚下地脉，先造成 ${Math.round(110 * ap)}% 范围伤害，再留下 7 秒熔岩池，每 0.5 秒造成 ${Math.round(38 * ap)}% 伤害并附加灼烧。`,
-    flavor: '大地只是还没烧透的灰。'
+    id: 'singularity', name: '虚井', glyph: '井', cd: 8, role: 'normal', behavior: 'singularityZone',
+    element: 'void', color: '#ad86ff', type: '普通 · 持续牵引',
+    desc: (ap) => `在敌群中打开一口持续 5 秒的虚井，不断牵引并按 0.6 秒造成 ${Math.round(52 * ap)}% 范围伤害，结束时爆发。`,
+    flavor: '井底没有水，只有方向在往下掉。'
   },
   {
-    id: 'singularity', name: '虚空奇点', glyph: '奇', cd: 8, role: 'normal', behavior: 'singularityZone',
-    element: 'void', color: '#ad86ff', type: '普通 · 持续牵引 / 终结爆发',
-    desc: (ap) => `生成持续 5 秒的奇点，不断牵引并每 0.6 秒造成 ${Math.round(55 * ap)}% 范围伤害，消失时再爆发 ${Math.round(150 * ap)}%，附加侵蚀。`,
-    flavor: '所有路径都在这里失去方向。'
+    id: 'bloodmoon', name: '血葬', glyph: '葬', cd: 10, role: 'heavy', behavior: 'bloodOrbit',
+    element: null, physical: true, color: '#ff6b9d', type: '重型 · 血刃环绕',
+    desc: (ap) => `召出 8 把环绕血刃，持续 7 秒切割敌人（每把 ${Math.round(72 * ap)}%），期间获得 15% 吸血；纯物理。`,
+    flavor: '月亮落下来的时候，没有一座坟是空的。'
   },
   {
-    id: 'bloodmoon', name: '血月轮舞', glyph: '月', cd: 10, role: 'heavy', behavior: 'bloodOrbit',
-    element: null, physical: true, color: '#ff6b9d', type: '重型 · 物理环绕 / 吸血',
-    desc: (ap) => `召出 8 把环绕血刃，持续 7 秒切割敌人（每把 ${Math.round(75 * ap)}% 攻击力），期间获得 15% 吸血；纯物理，不附加元素。`,
-    flavor: '月亮升起来的时候，血已经流成河。'
-  },
-  {
-    id: 'starfall', name: '星陨风暴', glyph: '坠', cd: 12, role: 'heavy', behavior: 'starfallBarrage',
-    element: 'void', color: '#c5a5ff', type: '重型 · 多目标星陨',
-    desc: (ap) => `召唤 12 枚虚空星陨覆盖敌群，在 2 秒内分批坠落（每枚 ${Math.round(75 * ap)}% 范围伤害），附加侵蚀。`,
+    id: 'starfall', name: '星崩', glyph: '崩', cd: 12, role: 'heavy', behavior: 'starfallBarrage',
+    element: 'void', color: '#c5a5ff', type: '重型 · 群星坠落',
+    desc: (ap) => `撕开天幕，12 枚虚空星陨在 2 秒内分批坠落（每枚 ${Math.round(72 * ap)}% 范围伤害），覆盖整片敌群。`,
     flavor: '所谓风暴，是天空把群星一起掷下。'
   }
 ];
 
-// 合成不再局外购买：组件各 4 点局内共鸣且都点亮进阶后，合成卡才进入三选一。
 const FUSIONS = [
   {
-    id: 'fuse_icefire', name: '冰火陨星', glyph: '冰', cd: 9, role: 'fusion', behavior: 'icefireMeteors',
+    id: 'fuse_icefire', name: '霜火天坠', glyph: '霜', cd: 9, role: 'fusion', behavior: 'icefireMeteors',
     element: 'fire', elements: ['fire', 'ice'], color: '#ffb3a0', type: '合成 · 双元素陨星',
     requires: ['meteor', 'frost'],
-    desc: (ap) => `在敌群落点连续引发 5 次冰火爆破（每次 ${Math.round(115 * ap)}% 范围伤害），同时附加灼烧与霜寒。局内门槛：陨火天坠、霜棱连射各 4 点共鸣且均进阶。`,
+    desc: (ap) => `连续引发 5 次霜火爆破（每次 ${Math.round(112 * ap)}% 范围伤害），同时附加灼烧与霜寒。局内门槛：天火、白羽各 4 点共鸣且均进阶。`,
     flavor: '冷到极致，就是灼烧。'
   },
   {
-    id: 'fuse_stormrift', name: '雷狱裂隙', glyph: '狱', cd: 6, role: 'fusion', behavior: 'stormriftZone',
-    element: 'shock', elements: ['shock', 'void'], color: '#d4b3ff', type: '合成 · 雷狱牵引领域',
+    id: 'fuse_stormrift', name: '雷渊', glyph: '渊', cd: 7, role: 'fusion', behavior: 'stormriftZone',
+    element: 'shock', elements: ['shock', 'void'], color: '#d4b3ff', type: '合成 · 雷渊牵引',
     requires: ['chain', 'voidrift'],
-    desc: (ap) => `连锁雷击 8 次并撕开持续牵引的雷狱，领域内同时附加感电与侵蚀。局内门槛：电弧脉冲、虚空飞弹各 4 点共鸣且均进阶。`,
+    desc: (ap) => `连锁雷击 8 次并撕开持续牵引的雷渊，领域内同时附加感电与侵蚀。局内门槛：雷鼓、萤火各 4 点共鸣且均进阶。`,
     flavor: '雷在笼子里，笼子也在雷里。'
   },
   {
-    id: 'fuse_bloodstar', name: '血誓星盾', glyph: '誓', cd: 7, role: 'fusion', behavior: 'bloodstarOrbit',
-    element: 'void', elements: ['void'], color: '#ff9fb0', type: '合成 · 血星环绕 / 生存',
+    id: 'fuse_bloodstar', name: '血星葬', glyph: '星', cd: 8, role: 'fusion', behavior: 'bloodstarOrbit',
+    element: 'void', elements: ['void'], color: '#ff9fb0', type: '合成 · 血星环绕',
     requires: ['starshield', 'bloodrite'],
-    desc: (ap) => `获得 ${Math.round(20 * ap)}% 最大生命护盾与 ${Math.round(8 * ap)}% 治疗，召出环绕血星及物理回旋刃，6 秒内吸血 +15%。局内门槛：星屑环绕、血刃回旋各 4 点共鸣且均进阶。`,
+    desc: (ap) => `获得护盾与治疗，召出环绕血星及物理回刃，6 秒内吸血 +15%。局内门槛：星纱、回刃各 4 点共鸣且均进阶。`,
     flavor: '以血立誓的人，星光会替他挡刀。'
   }
 ];
@@ -6948,14 +6994,11 @@ const RAW_SYNERGIES = [
 
   // 新技能相关共鸣（10 组）。
   { id: 'ember_nova', name: '烬晶', glyph: '烬', pair: ['embergun', 'icenova'], desc: '蒸发反应伤害 +25%，普攻伤害 +10%。', mods: { reactionDmgPct: 0.25, basicDmgPct: 0.1 } },
-  { id: 'ember_lava', name: '燎原', glyph: '原', pair: ['embergun', 'lavapool'], tier: 'major', desc: '灼烧 +35%，技能强度 +15%。', mods: { burnPct: 0.35, abilityPowerPct: 0.15 } },
   { id: 'ember_star', name: '流星膛线', glyph: '膛', pair: ['embergun', 'starfall'], desc: '普攻伤害 +20%，对首领伤害 +15%。', mods: { basicDmgPct: 0.2, bossDmgPct: 0.15 } },
   { id: 'frost_nova', name: '绝对零度', glyph: '零', pair: ['frost', 'icenova'], tier: 'major', desc: '缓速 +12%，元素反应伤害 +20%。', mods: { slowPct: 0.12, reactionDmgPct: 0.2 } },
-  { id: 'lava_sun', name: '日核地脉', glyph: '核', pair: ['lavapool', 'sunbeam'], tier: 'major', desc: '灼烧 +30%，技能强度 +20%。', mods: { burnPct: 0.3, abilityPowerPct: 0.2 } },
   { id: 'void_singularity', name: '事件视界', glyph: '界', pair: ['voidrift', 'singularity'], tier: 'major', desc: '技能强度 +25%，护盾上限提升。', mods: { abilityPowerPct: 0.25 }, flags: ['shieldCap'] },
   { id: 'singularity_star', name: '群星归墟', glyph: '墟', pair: ['singularity', 'starfall'], tier: 'major', desc: '元素反应伤害 +35%，对首领伤害 +20%。', mods: { reactionDmgPct: 0.35, bossDmgPct: 0.2 } },
   { id: 'star_shield', name: '星幕', glyph: '幕', pair: ['starshield', 'starfall'], desc: '开局护盾 +12%，持有护盾时伤害 +15%。', mods: { startShieldPct: 0.12, shieldDmgPct: 0.15 } },
-  { id: 'blood_lava', name: '热血熔流', glyph: '热', pair: ['bloodrite', 'lavapool'], desc: '吸血 +8%，低血增伤 +20%。', mods: { lifestealPct: 0.08, belowHalfDmgPct: 0.2 } },
   { id: 'nova_storm', name: '冰雷暴', glyph: '雹', pair: ['icenova', 'stormfield'], desc: '元素反应伤害 +25%，缓速 +8%。', mods: { reactionDmgPct: 0.25, slowPct: 0.08 } }
 ];
 
@@ -7391,7 +7434,7 @@ function reactionKey(a, b) {
 }
 
 // ── js/data/runTree.js ──
-// v4 局内技能树：15 条分支，每条 root → advanced，相邻 root 之间各有一个 cross。
+// v4 局内技能树：14 条分支，每条 root → advanced，相邻 root 之间各有一个 cross。
 // 节点不再消耗技能点；root / advanced / cross 都只能经升级三选一点亮。
 
 
@@ -8013,7 +8056,7 @@ function triggerReaction(run, enemy, key, events) {
   enemy.status.ice = { stacks: 0, until: 0 };
   enemy.status.shock = { stacks: 0, until: 0 };
   enemy.status.void = { stacks: 0, until: 0 };
-  enemy.reactionCd = 0.9;
+  enemy.reactionCd = 1.25;
   const mult = 1 + (stats.reactionDmgPct || 0);
   const base = stats.atk * (1 + stats.abilityPower * 0.25) * mult;
   let damage = 0;
@@ -8067,15 +8110,19 @@ function triggerReaction(run, enemy, key, events) {
     default:
       break;
   }
-  pushEvent(events, {
-    type: 'reaction',
-    reaction: reaction.id,
-    name: reaction.name,
-    color: reaction.color,
-    glyph: reaction.glyph,
-    x: enemy.x,
-    y: enemy.y
-  });
+  // 持续性技能会不断触发反应：伤害照常结算，但表现事件做全局限流，避免弹幕/粒子卡顿。
+  if ((run.reactionFxCd || 0) <= 0) {
+    run.reactionFxCd = 0.22;
+    pushEvent(events, {
+      type: 'reaction',
+      reaction: reaction.id,
+      name: reaction.name,
+      color: reaction.color,
+      glyph: reaction.glyph,
+      x: enemy.x,
+      y: enemy.y
+    });
+  }
   if (damage > 0) hitEnemy(run, enemy, damage, events, {});
   if (radius > 0 && splash > 0) {
     for (const other of run.enemies) {
@@ -8942,10 +8989,13 @@ function castAbility(run, id) {
     for (let i = 0; i < extra; i++) {
       castBeam(run, attack * 0.8, events, { element: 'fire', color: def.color, width: 26, length: 780, angleOffset: (i % 2 ? 1 : -1) * 0.08 });
     }
-  } else if (behavior === 'stormZone') {
+  } else if (behavior === 'thunderCage') {
+    for (const enemy of run.enemies) {
+      if (!enemy.dead && distance(enemy.x, enemy.y, tx, ty) <= 190) enemy.stunUntil = Math.max(enemy.stunUntil || 0, run.elapsed + 1.2);
+    }
     spawnZone(run, {
-      kind: 'stormfield', x: tx, y: ty, radius: 180 + extra * 10, duration: 5,
-      tickInterval: 0.45, dmg: attack * 0.45, element: 'shock', color: def.color
+      kind: 'thunderCage', x: tx, y: ty, radius: 180 + extra * 10, duration: 5,
+      tickInterval: 0.45, dmg: attack * 0.4, element: 'shock', color: def.color
     });
     pushEvent(events, { type: 'nova', x: tx, y: ty, radius: 180, color: def.color });
   } else if (behavior === 'basicEnchantment') {
@@ -9332,6 +9382,7 @@ function stepRun(run, dt = STEP) {
   if (!run.active || run.paused || run.draft || run.relicOffer) return events;
   const step = Math.min(dt, STEP * 3);
   run.elapsed += step;
+  if (run.reactionFxCd > 0) run.reactionFxCd = Math.max(0, run.reactionFxCd - step);
   const stats = run.stats;
   run.player.invuln = Math.max(0, run.player.invuln - step);
   run.player.dashCd = Math.max(0, run.player.dashCd - step);
@@ -10026,8 +10077,14 @@ function ensure() {
   try {
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.5;
-    master.connect(ctx.destination);
+    master.gain.value = 0.28;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.knee.value = 18;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.2;
+    master.connect(comp).connect(ctx.destination);
   } catch {
     ctx = null;
   }
@@ -10050,80 +10107,87 @@ function tone({ freq = 440, endFreq = freq, duration = 0.12, type = 'sine', gain
   const t0 = c.currentTime + delay;
   const osc = c.createOscillator();
   const g = c.createGain();
+  const filter = c.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2200;
+  filter.Q.value = 0.4;
   osc.type = type;
   osc.frequency.setValueAtTime(Math.max(20, freq), t0);
   if (endFreq !== freq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t0 + duration);
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-  osc.connect(g).connect(master);
+  osc.connect(filter).connect(g).connect(master);
   osc.start(t0);
   osc.stop(t0 + duration + 0.02);
 }
 
 const SFX = {
-  hit: () => tone({ freq: 220, endFreq: 150, duration: 0.07, type: 'triangle', gain: 0.08 }),
+  hit: () => tone({ freq: 180, endFreq: 110, duration: 0.06, type: 'triangle', gain: 0.04 }),
   crit: () => {
-    tone({ freq: 520, endFreq: 260, duration: 0.1, type: 'square', gain: 0.07 });
-    tone({ freq: 900, endFreq: 500, duration: 0.09, type: 'triangle', gain: 0.05, delay: 0.02 });
+    tone({ freq: 420, endFreq: 260, duration: 0.09, type: 'triangle', gain: 0.035 });
+    tone({ freq: 640, endFreq: 420, duration: 0.08, type: 'sine', gain: 0.025, delay: 0.02 });
   },
-  kill: () => tone({ freq: 160, endFreq: 70, duration: 0.16, type: 'sawtooth', gain: 0.07 }),
-  hurt: () => tone({ freq: 110, endFreq: 70, duration: 0.13, type: 'square', gain: 0.09 }),
+  reaction: () => {
+    tone({ freq: 260, endFreq: 180, duration: 0.18, type: 'sine', gain: 0.045 });
+    tone({ freq: 390, endFreq: 260, duration: 0.16, type: 'triangle', gain: 0.025, delay: 0.03 });
+  },
+  kill: () => tone({ freq: 140, endFreq: 65, duration: 0.14, type: 'sine', gain: 0.045 }),
+  hurt: () => tone({ freq: 95, endFreq: 55, duration: 0.11, type: 'sine', gain: 0.05 }),
   level: () => {
-    tone({ freq: 523, duration: 0.14, type: 'triangle', gain: 0.09 });
-    tone({ freq: 659, duration: 0.16, type: 'triangle', gain: 0.08, delay: 0.1 });
-    tone({ freq: 880, duration: 0.2, type: 'triangle', gain: 0.08, delay: 0.21 });
+    tone({ freq: 392, duration: 0.14, type: 'sine', gain: 0.05 });
+    tone({ freq: 523, duration: 0.16, type: 'sine', gain: 0.045, delay: 0.1 });
+    tone({ freq: 659, duration: 0.2, type: 'sine', gain: 0.04, delay: 0.21 });
   },
   buy: () => {
-    tone({ freq: 660, duration: 0.07, type: 'triangle', gain: 0.06 });
-    tone({ freq: 990, duration: 0.1, type: 'triangle', gain: 0.05, delay: 0.06 });
+    tone({ freq: 440, duration: 0.07, type: 'sine', gain: 0.035 });
+    tone({ freq: 660, duration: 0.09, type: 'sine', gain: 0.03, delay: 0.06 });
   },
-  error: () => tone({ freq: 180, endFreq: 120, duration: 0.14, type: 'square', gain: 0.06 }),
+  error: () => tone({ freq: 160, endFreq: 110, duration: 0.12, type: 'triangle', gain: 0.04 }),
   boss: () => {
-    tone({ freq: 90, endFreq: 60, duration: 0.6, type: 'sawtooth', gain: 0.1 });
-    tone({ freq: 140, endFreq: 80, duration: 0.5, type: 'triangle', gain: 0.07, delay: 0.1 });
+    tone({ freq: 72, endFreq: 48, duration: 0.55, type: 'sine', gain: 0.06 });
+    tone({ freq: 110, endFreq: 65, duration: 0.45, type: 'triangle', gain: 0.04, delay: 0.1 });
   },
   ability: () => {
-    tone({ freq: 380, endFreq: 880, duration: 0.22, type: 'sine', gain: 0.1 });
-    tone({ freq: 110, endFreq: 60, duration: 0.24, type: 'triangle', gain: 0.08 });
+    tone({ freq: 320, endFreq: 520, duration: 0.2, type: 'sine', gain: 0.045 });
+    tone({ freq: 90, endFreq: 50, duration: 0.22, type: 'triangle', gain: 0.045 });
   },
   skillFire: () => {
-    tone({ freq: 180, endFreq: 70, duration: 0.28, type: 'sawtooth', gain: 0.1 });
-    tone({ freq: 620, endFreq: 240, duration: 0.16, type: 'triangle', gain: 0.06, delay: 0.02 });
+    tone({ freq: 130, endFreq: 65, duration: 0.24, type: 'triangle', gain: 0.055 });
+    tone({ freq: 360, endFreq: 180, duration: 0.14, type: 'sine', gain: 0.025, delay: 0.02 });
   },
   skillIce: () => {
-    tone({ freq: 980, endFreq: 540, duration: 0.2, type: 'sine', gain: 0.09 });
-    tone({ freq: 1400, endFreq: 900, duration: 0.16, type: 'triangle', gain: 0.05, delay: 0.03 });
+    tone({ freq: 620, endFreq: 380, duration: 0.18, type: 'sine', gain: 0.04 });
+    tone({ freq: 820, endFreq: 520, duration: 0.14, type: 'sine', gain: 0.02, delay: 0.03 });
   },
   skillShock: () => {
-    tone({ freq: 240, endFreq: 1200, duration: 0.12, type: 'square', gain: 0.09 });
-    tone({ freq: 780, endFreq: 220, duration: 0.16, type: 'sawtooth', gain: 0.06, delay: 0.04 });
+    tone({ freq: 190, endFreq: 100, duration: 0.12, type: 'triangle', gain: 0.045 });
+    tone({ freq: 480, endFreq: 240, duration: 0.14, type: 'sine', gain: 0.025, delay: 0.03 });
   },
   skillVoid: () => {
-    tone({ freq: 90, endFreq: 42, duration: 0.42, type: 'sine', gain: 0.12 });
-    tone({ freq: 320, endFreq: 140, duration: 0.3, type: 'triangle', gain: 0.06, delay: 0.03 });
+    tone({ freq: 70, endFreq: 38, duration: 0.38, type: 'sine', gain: 0.065 });
+    tone({ freq: 220, endFreq: 110, duration: 0.28, type: 'triangle', gain: 0.03, delay: 0.03 });
   },
   skillShield: () => {
-    tone({ freq: 520, duration: 0.18, type: 'sine', gain: 0.08 });
-    tone({ freq: 780, duration: 0.24, type: 'sine', gain: 0.06, delay: 0.06 });
+    tone({ freq: 420, duration: 0.16, type: 'sine', gain: 0.035 });
+    tone({ freq: 560, duration: 0.2, type: 'sine', gain: 0.025, delay: 0.05 });
   },
   skillBig: () => {
-    tone({ freq: 70, endFreq: 34, duration: 0.55, type: 'sawtooth', gain: 0.14 });
-    tone({ freq: 420, endFreq: 120, duration: 0.4, type: 'triangle', gain: 0.09 });
-    tone({ freq: 900, endFreq: 300, duration: 0.3, type: 'sine', gain: 0.05, delay: 0.04 });
+    tone({ freq: 58, endFreq: 30, duration: 0.5, type: 'sine', gain: 0.07 });
+    tone({ freq: 280, endFreq: 90, duration: 0.35, type: 'triangle', gain: 0.04 });
   },
   ult: () => {
-    tone({ freq: 140, endFreq: 420, duration: 0.5, type: 'sawtooth', gain: 0.09 });
-    tone({ freq: 280, endFreq: 840, duration: 0.6, type: 'triangle', gain: 0.06, delay: 0.08 });
+    tone({ freq: 110, endFreq: 300, duration: 0.45, type: 'sine', gain: 0.05 });
+    tone({ freq: 220, endFreq: 520, duration: 0.5, type: 'triangle', gain: 0.03, delay: 0.06 });
   },
   death: () => {
-    tone({ freq: 240, endFreq: 80, duration: 0.9, type: 'sawtooth', gain: 0.09 });
-    tone({ freq: 140, endFreq: 50, duration: 1.1, type: 'triangle', gain: 0.07, delay: 0.15 });
+    tone({ freq: 180, endFreq: 60, duration: 0.8, type: 'sine', gain: 0.05 });
+    tone({ freq: 100, endFreq: 40, duration: 1.0, type: 'triangle', gain: 0.035, delay: 0.12 });
   },
   relic: () => {
-    tone({ freq: 440, duration: 0.16, type: 'sine', gain: 0.08 });
-    tone({ freq: 554, duration: 0.18, type: 'sine', gain: 0.07, delay: 0.12 });
-    tone({ freq: 739, duration: 0.24, type: 'sine', gain: 0.07, delay: 0.24 });
+    tone({ freq: 392, duration: 0.15, type: 'sine', gain: 0.04 });
+    tone({ freq: 523, duration: 0.18, type: 'sine', gain: 0.035, delay: 0.1 });
+    tone({ freq: 659, duration: 0.22, type: 'sine', gain: 0.03, delay: 0.2 });
   }
 };
 
@@ -10135,11 +10199,17 @@ function playSkill(element) {
 }
 
 let lastHit = 0;
+let lastSkill = 0;
+let lastReaction = 0;
 function play(name) {
   if (!enabled) return;
   const now = performance.now();
-  if (name === 'hit' && now - lastHit < 45) return;
+  if (name === 'hit' && now - lastHit < 70) return;
   if (name === 'hit') lastHit = now;
+  if (name.startsWith('skill') && now - lastSkill < 110) return;
+  if (name.startsWith('skill')) lastSkill = now;
+  if (name === 'reaction' && now - lastReaction < 160) return;
+  if (name === 'reaction') lastReaction = now;
   const fn = SFX[name];
   if (fn) fn();
 }
@@ -10148,6 +10218,112 @@ function stopAll() {
   if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {});
   ctx = null;
   master = null;
+}
+
+// ── js/ui/icons.js ──
+// v5 技能图标：纯 SVG 线条徽记，不依赖字体/图片资源。
+const NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs = {}) {
+  const node = document.createElementNS(NS, tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+  return node;
+}
+
+const ICONS = {
+  embergun: {
+    paths: ['M4 24 L11 10 L16 17 L21 7 L28 24', 'M11 10 L16 14', 'M21 7 L16 14'],
+    circles: [[16, 20, 2]]
+  },
+  frost: {
+    paths: ['M9 26 C18 22 24 14 26 6 C18 8 10 14 7 22 Z', 'M9 26 L23 10', 'M15 19 L13 22', 'M19 15 L17 18']
+  },
+  chain: {
+    paths: ['M6 21 C6 17.7 10.5 15 16 15 C21.5 15 26 17.7 26 21', 'M6 21 L6 24 M26 21 L26 24', 'M17 3 L12 14 H17 L14 27', 'M9 21 L9 24 M23 21 L23 24']
+  },
+  voidrift: {
+    paths: ['M9 22 C7 16 11 9 18 8', 'M18 8 C24 9 27 15 24 21', 'M24 21 C20 26 12 26 9 22'],
+    circles: [[11, 12, 1.4], [21, 11, 1.1], [20, 23, 1.7], [14, 18, 1]]
+  },
+  starshield: {
+    paths: ['M16 4 L18.4 13.6 L28 16 L18.4 18.4 L16 28 L13.6 18.4 L4 16 L13.6 13.6 Z', 'M7 7 L9 11', 'M25 25 L23 21']
+  },
+  bloodrite: {
+    paths: ['M5 21 C9 10 20 5 28 9 C25 18 17 25 8 25 Z', 'M10 21 C14 16 20 13 25 13', 'M8 11 L13 16']
+  },
+  meteor: {
+    paths: ['M18 6 A8 8 0 1 1 12 20 A8 8 0 0 1 18 6', 'M8 6 L3 3', 'M6 12 L2 10', 'M12 24 L8 28', 'M20 24 L24 28'],
+    circles: [[18, 12, 3.2]]
+  },
+  sunbeam: {
+    paths: ['M16 4 V28', 'M13 7 L16 3 L19 7', 'M8 16 H24', 'M7 11 L3 8', 'M25 11 L29 8', 'M7 21 L3 24', 'M25 21 L29 24'],
+    circles: [[16, 16, 3]]
+  },
+  stormfield: {
+    paths: ['M8 8 H24 V26 H8 Z', 'M12 8 V26', 'M20 8 V26', 'M8 15 H24', 'M8 21 H24', 'M17 11 L13 18 H17 L14 24']
+  },
+  thunderbrand: {
+    paths: ['M16 3 L27 9 V23 L16 29 L5 23 V9 Z', 'M17 8 L11 17 H16 L14 24', 'M9 12 L23 20', 'M23 12 L9 20']
+  },
+  icenova: {
+    paths: ['M16 3 L25 16 L16 29 L7 16 Z', 'M16 9 L16 23', 'M10 16 L22 16', 'M11 10 L21 22', 'M21 10 L11 22']
+  },
+  singularity: {
+    paths: ['M16 4 A12 12 0 1 1 15.9 4', 'M16 9 A7 7 0 1 1 15.9 9', 'M10 8 L6 4', 'M22 8 L26 4', 'M10 24 L6 28', 'M22 24 L26 28'],
+    circles: [[16, 16, 2.4]]
+  },
+  bloodmoon: {
+    paths: ['M21 5 A12 12 0 1 0 27 22 A9 9 0 0 1 21 5 Z', 'M8 22 L18 12', 'M11 25 L19 17']
+  },
+  starfall: {
+    paths: ['M8 4 L10 10 L16 12 L10 14 L8 20 L6 14 L0 12 L6 10 Z', 'M24 3 L25.5 7 L30 8.5 L25.5 10 L24 14 L22.5 10 L18 8.5 L22.5 7 Z', 'M12 20 L10 26', 'M22 18 L20 25', 'M16 14 L16 28'],
+    circles: [[27, 19, 1.4]]
+  },
+  fuse_icefire: {
+    paths: ['M16 3 L19 13 L29 16 L19 19 L16 29 L13 19 L3 16 L13 13 Z', 'M16 9 L16 23', 'M9 12 L23 20', 'M23 12 L9 20']
+  },
+  fuse_stormrift: {
+    paths: ['M16 3 A13 13 0 1 1 15.9 3', 'M16 8 A8 8 0 1 1 15.9 8', 'M17 7 L11 16 H16 L14 25', 'M7 16 H25']
+  },
+  fuse_bloodstar: {
+    paths: ['M20 4 A11 11 0 1 0 26 20 A8 8 0 0 1 20 4 Z', 'M16 6 L18 12 L24 14 L18 16 L16 22 L14 16 L8 14 L14 12 Z']
+  }
+};
+
+const FALLBACK = {
+  paths: ['M16 3 L26 9 V23 L16 29 L6 23 V9 Z', 'M16 9 V23'],
+  circles: [[16, 16, 2]]
+};
+
+function abilityIcon(id, className = 'ability-icon') {
+  const data = ICONS[id] || FALLBACK;
+  const svg = svgEl('svg', {
+    class: `${className} skill-icon`,
+    viewBox: '0 0 32 32',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': '1.7',
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'aria-hidden': 'true',
+    focusable: 'false'
+  });
+  for (const d of data.paths || []) svg.append(svgEl('path', { d }));
+  for (const [cx, cy, r] of data.circles || []) {
+    svg.append(svgEl('circle', { cx, cy, r, fill: 'currentColor', stroke: 'none' }));
+  }
+  return svg;
+}
+
+function runeIcon(className = 'ability-icon') {
+  const svg = svgEl('svg', {
+    class: `${className} skill-icon`, viewBox: '0 0 32 32', fill: 'none',
+    stroke: 'currentColor', 'stroke-width': '1.6', 'aria-hidden': 'true'
+  });
+  for (const d of ['M16 4 L27 11 L23 26 H9 L5 11 Z', 'M16 9 L21 16 L16 24 L11 16 Z']) {
+    svg.append(svgEl('path', { d }));
+  }
+  return svg;
 }
 
 // ── js/ui/arena.js ──
@@ -10353,9 +10529,9 @@ function handleArenaEvents(ctxApp, run, events) {
       case 'reaction': {
         addText(event.x, event.y - 22, event.name, event.color, 22, 1.15);
         addRing(event.x, event.y, 118, event.color, 0.55, 3);
-        burst(event.x, event.y, event.color, 24, 230, 3.4, 0.7);
-        world.shake = Math.max(world.shake, 7);
-        world.flash = Math.max(world.flash, 0.35);
+        burst(event.x, event.y, event.color, 10, 190, 2.6, 0.55);
+        world.shake = Math.max(world.shake, 4);
+        world.flash = Math.max(world.flash, 0.16);
         world.flashColor = event.color;
         break;
       }
@@ -10678,7 +10854,7 @@ function drawEnemies(c, run) {
     c.fillStyle = enemy.tint;
     c.shadowColor = enemy.tint;
     c.shadowBlur = isBoss ? 24 : 10;
-    c.font = `${Math.round(r * (isBoss ? 1.5 : 1.25))}px "Songti SC", "Noto Serif SC", serif`;
+    c.font = `${Math.round(r * (isBoss ? 1.5 : 1.25))}px "PingFang SC", sans-serif`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.fillText(enemy.glyph, 0, 1);
@@ -10870,7 +11046,7 @@ function drawPlayer(c, run) {
   c.stroke();
   // 字形
   c.fillStyle = '#2a0f06';
-  c.font = '22px "Songti SC", "Noto Serif SC", serif';
+  c.font = '22px "PingFang SC", sans-serif';
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   c.fillText('烬', 0, 1);
@@ -11047,6 +11223,7 @@ function drawJoystick(c) {
 
 
 
+
 const delveEls = {};
 let lastStatsAt = 0;
 let lastLogKey = '';
@@ -11168,7 +11345,7 @@ function renderIdle(ctx) {
   const forgeLevels = Object.values(meta.forge || {}).reduce((a, b) => a + (b || 0), 0);
   const quick = meta.runs > 0
     ? [`累计下潜 ${fmtInt(meta.runs)} 次`, `击杀 ${fmtInt(meta.kills)}`, `组合图鉴 ${COMBO_SHOP.length} 项`, `祭坛 Lv.${forgeLevels}`]
-    : ['15 个主动技能', '一局最多 6 个', '46 节点只读星图', '组合无需购买'];
+    : ['14 个主动技能', '一局最多 6 个', '43 节点只读星图', '组合无需购买'];
 
   const wrap = h('div', { class: 'idle-wrap' },
     h('section', { class: 'panel idle-hero' },
@@ -11259,7 +11436,7 @@ function buildAbilityBar(ctx, force = false) {
         'aria-label': `${ability.name}，${ROLE_NAMES[role] || '技能'}，点击查看详情`
       },
         h('span', { class: 'skill-ring', 'aria-hidden': 'true' }),
-        h('span', { class: 'skill-glyph' }, ability.glyph),
+        h('span', { class: 'skill-glyph' }, abilityIcon(id)),
         h('span', { class: 'skill-cd', 'aria-hidden': 'true' }),
         h('span', { class: 'skill-cd-text', 'aria-hidden': 'true' })
       );
@@ -11293,7 +11470,7 @@ function renderAbilityDetail(ctx) {
   const role = ability.role || 'normal';
   delveEls.abilityDetail.hidden = false;
   delveEls.abilityDetail.style.setProperty('--c', ability.color || '#ff7d47');
-  delveEls.abilityDetailGlyph.textContent = ability.glyph;
+  clear(delveEls.abilityDetailGlyph).append(abilityIcon(selectedAbilityId));
   delveEls.abilityDetailName.textContent = ability.name;
   const element = ability.elements ? ability.elements.map((id) => ELEMENT_NAMES[id]).join(' / ') : ELEMENT_NAMES[ability.element] || '物理';
   delveEls.abilityDetailMeta.textContent = `${ROLE_NAMES[role] || '主动'} · ${element} · ${ability.type || ability.behavior}`;
@@ -11610,7 +11787,7 @@ function handleDelveEvents(ctx, events) {
         if (event.boss) play('relic');
         break;
       case 'reaction':
-        play('crit');
+        play('reaction');
         break;
       case 'hurt':
         if (hurtSound < 2) {
@@ -11722,6 +11899,7 @@ function renderFrame(ctx, run, dt) {
 
 
 
+
 const pageEls = {};
 
 function initPages(ctx) {
@@ -11765,10 +11943,10 @@ function section(title, subtitle, body) {
 function guideSection() {
   const steps = [
     ['走位与射击', 'WASD / 方向键（触屏拖动战斗区）移动。角色自动锁敌射击；开局没有主动技能，首次升级时选择根节点获得技能。'],
-    ['15 技能与 6 格', '15 个主动技能分为速射（0.7–1.4 秒）、普通（4.5–8 秒）与重型（9–12 秒）。技能槽在深度 1 / 5 / 10 / 16 / 22 / 30 解锁 1–6 格，技能栏始终保留占位。'],
+    ['14 技能与 6 格', '14 个主动技能分为速射（0.7–1.4 秒）、普通（4.5–8 秒）与重型（9–12 秒）。技能槽在深度 1 / 5 / 10 / 16 / 22 / 30 解锁 1–6 格，技能栏始终保留占位。'],
     ['技能详情与冷却', '点击圆形技能图标查看名称、元素、真实冷却与共鸣；手机无需 hover。HUD 冷却由引擎按基础 cd、CDR 与技能冷却强化共同结算。'],
     ['升级三选一', '每次升级混合三类：树节点卡、可重复的技能随机数值卡、普通卡牌。每张都会标注类别与关键收益；手机可横向滑动。'],
-    ['46 节点只读星图', '核心 + 15 根节点 + 15 进阶 + 15 跨系，共 46 个节点。星图可缩放与聚焦分支，但不能购买或直接加点，只能经升级三选一点亮。'],
+    ['43 节点只读星图', '核心 + 14 根节点 + 14 进阶 + 14 跨系，共 43 个节点。星图可缩放与聚焦分支，但不能购买或直接加点，只能经升级三选一点亮。'],
     ['进阶与共鸣值', '每个技能获得 3 次数值强化后可选取进阶。共鸣值 = 数值强化次数 +（进阶已点亮 ? 1 : 0）。'],
     ['普通 / 强共鸣', '全部组合免费可见。普通组合需双方各 3 点共鸣，强共鸣需双方各 4 点；达标后自动生效，图鉴会显示每个组件的进度。'],
     ['技能合成', '冰火陨星、雷狱裂隙、血誓星盾需组件双方各 4 点共鸣且都点亮进阶，合成卡才会进入三选一；合成后保留相关共鸣。'],
@@ -11847,7 +12025,7 @@ function abilitySection() {
       h('div', { class: 'codex-grid' },
         ABILITIES.map((ability) =>
           h('article', { class: 'codex-item' },
-            h('span', { class: 'codex-glyph', style: `--c:${ability.color}` }, ability.glyph),
+            h('span', { class: 'codex-glyph', style: `--c:${ability.color}` }, abilityIcon(ability.id)),
             h('div', {},
               h('h3', {}, ability.name, ' ', elementChip(ability.element)),
               h('p', { class: 'codex-effect' }, ability.desc(1)),
@@ -11860,7 +12038,7 @@ function abilitySection() {
       h('div', { class: 'codex-grid' },
         FUSIONS.map((fusion) =>
           h('article', { class: 'codex-item fusion-item' },
-            h('span', { class: 'codex-glyph', style: `--c:${fusion.color}` }, fusion.glyph),
+            h('span', { class: 'codex-glyph', style: `--c:${fusion.color}` }, abilityIcon(fusion.id)),
             h('div', {},
               h('h3', {}, fusion.name),
               h('p', { class: 'codex-effect' }, fusion.desc(1)),
@@ -12252,7 +12430,8 @@ function renderCombos(ctx) {
 }
 
 // ── js/ui/runTree.js ──
-// v4 局内技能星图：46 节点径向只读展示，支持缩放、拖动与单分支聚焦。
+// v4 局内技能星图：43 节点径向只读展示，支持缩放、拖动与单分支聚焦。
+
 
 
 
@@ -12497,7 +12676,7 @@ function renderRunTree(ctx) {
         renderRunTree(ctx);
       }
     },
-      h('span', { class: 'run-tree-glyph' }, node.kind === 'core' ? '核' : node.glyph),
+      h('span', { class: 'run-tree-glyph' }, node.kind === 'core' ? runeIcon() : node.skill ? abilityIcon(node.skill) : runeIcon()),
       node.kind === 'cross' ? null : h('span', { class: 'run-tree-name' }, node.kind === 'advanced' ? '进阶' : label),
       progress ? h('span', { class: 'run-tree-progress' }, progress) : null
     );
@@ -12511,9 +12690,9 @@ function renderRunTree(ctx) {
 }
 
 function showDefaultTip() {
-  els.tipName.textContent = focusedSkill === 'all' ? '46 节点星座总览' : `${ALL_ABILITY_BY_ID[focusedSkill]?.name || '技能'} · 分支聚焦`;
+  els.tipName.textContent = focusedSkill === 'all' ? '43 节点星座总览' : `${ALL_ABILITY_BY_ID[focusedSkill]?.name || '技能'} · 分支聚焦`;
   els.tipDesc.textContent = focusedSkill === 'all'
-    ? '15 条分支由核心向外展开。外环菱形为跨系节点；可用上方分支选择器放大局部。'
+    ? '14 条分支由核心向外展开。外环菱形为跨系节点；可用上方分支选择器放大局部。'
     : '当前只展开选中分支、相邻根节点与跨系节点。点击任意节点查看收益和解锁条件。';
   clear(els.tipEffects).append(h('p', { class: 'run-tree-state' }, '所有节点仅能通过升级三选一获得，不能在星图中直接加点。'));
 }
@@ -12553,6 +12732,7 @@ function showTip(ctx, node, info) {
 
 // ── js/ui/modals.js ──
 // 弹窗：升级三选一、首领遗物、下潜结算、离线收益、教程、设置、确认框。
+
 
 
 
@@ -12740,7 +12920,7 @@ function buildDraft(ctx, spec) {
       },
         h('span', { class: 'draft-rarity' }, `树节点 · ${kindName}`),
         h('span', { class: 'draft-index' }, index + 1),
-        h('span', { class: 'draft-glyph' }, node.glyph),
+        h('span', { class: 'draft-glyph' }, node.skill ? abilityIcon(node.skill) : runeIcon()),
         h('span', { class: 'draft-name' }, node.name),
         h('span', { class: 'draft-flavor' }, node.kind === 'root' ? '新的主动技能与技能强度' : node.kind === 'advanced' ? '伤害 / 数量 / 冷却三重提升' : '两个相邻分支的跨系增益'),
         h('ul', { class: 'draft-effects' }, lines.map((line) => h('li', {}, h('span', {}, line))))
@@ -12757,7 +12937,7 @@ function buildDraft(ctx, spec) {
       },
         h('span', { class: 'draft-rarity' }, '随机数值 · 可重复'),
         h('span', { class: 'draft-index' }, index + 1),
-        h('span', { class: 'draft-glyph' }, ability.glyph),
+        h('span', { class: 'draft-glyph' }, abilityIcon(id)),
         h('span', { class: 'draft-name' }, info.name),
         h('span', { class: 'draft-flavor' }, `${ability.type || ability.role} · 当前实际冷却由引擎结算`),
         h('ul', { class: 'draft-effects' },
@@ -12949,8 +13129,8 @@ function openTutorial(ctx) {
 function buildTutorial(ctx) {
   const steps = [
     ['走位与第一技能', 'WASD / 方向键（手机拖动战斗区）移动，角色自动锁敌射击。开局没有主动技能，首次升级三选一中选择技能根节点来获得第一个技能。'],
-    ['15 技能 · 6 格', '15 个主动技能分为速射、普通与重型。技能槽在深度 1 / 5 / 10 / 16 / 22 / 30 逐步解锁，最多 6 个；点击圆形图标可查看真实冷却和技能详情。'],
-    ['46 节点只读星图', '按 T 查看 46 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
+    ['14 技能 · 6 格', '14 个主动技能分为速射、普通与重型。技能槽在深度 1 / 5 / 10 / 16 / 22 / 30 逐步解锁，最多 6 个；点击圆形图标可查看真实冷却和技能详情。'],
+    ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
     ['组合无需购买', '普通组合需双方各 3 点共鸣，强共鸣各 4 点；合成需双方各 4 点且都点亮进阶。数值强化与进阶积累共鸣，组合图鉴只用于查看目标与进度。'],
     ['带回魂火', '死亡或主动撤退都会结算魂火。魂火用于余烬祭坛的永久强化；达到深度门槛可轮回换星屑。'],
     ['自动战斗', '开启「自动」后 AI 会走位、放技能、选卡并在死亡后继续下一局。也可只关闭自动弹幕，用 1–6 或技能详情面板手动施法。']
@@ -13039,7 +13219,7 @@ function buildSettings(ctx) {
     ),
     list,
     h('div', { class: 'modal-foot' },
-      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v4.0'),
+      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v5.0'),
       h('button', { class: 'btn btn-ghost', onclick: () => closeModal(ctx) }, '关闭')
     )
   );
