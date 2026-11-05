@@ -5956,7 +5956,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T19:02:34.416Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T19:03:47.772Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -5966,7 +5966,8 @@ const BAL = {
     hp: 220,
     interval: 0.78, // 秒/次（射击间隔）
     crit: 0.05,
-    critDmg: 1.5
+    critDmg: 1.5,
+    lifesteal: 0.02
   },
   caps: {
     crit: 1,
@@ -6878,7 +6879,7 @@ function deriveStats(mods, meta) {
     critDmg: BAL.base.critDmg + (s.critDmgPct || 0),
     armor: Math.max(0, s.armorFlat || 0),
     regen: Math.max(0, BAL.baseRegen + (s.regenPct || 0)),
-    lifesteal: Math.max(0, s.lifestealPct || 0),
+    lifesteal: Math.max(0, (BAL.base.lifesteal || 0) + (s.lifestealPct || 0)),
     thorns: Math.max(0, s.thornsPct || 0),
     burn: Math.max(0, s.burnPct || 0),
     slow: Math.min(BAL.caps.slow, s.slowPct || 0),
