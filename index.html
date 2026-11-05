@@ -5707,6 +5707,27 @@ body.reduce-motion *::after {
   }
 }
 
+/* 手机端：HUD 空白区域必须让触摸穿透到画布摇杆 */
+@media (max-width: 720px) {
+  .hud-right,
+  .skill-bar,
+  .skill-extra {
+    pointer-events: none;
+  }
+
+  .hud-right .skill-btn,
+  .hud-right .ult-btn,
+  .hud-right .skill-slot {
+    pointer-events: auto;
+  }
+
+  .hud-left,
+  .player-bars,
+  .hud-status {
+    pointer-events: none;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -5935,7 +5956,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:46:19.010Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:48:26.725Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
