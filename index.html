@@ -5671,6 +5671,42 @@ body.reduce-motion *::after {
   }
 }
 
+/* 血条放到玩家状态栏后，保证有明确宽度 */
+.player-bars .bar.hp {
+  width: 100%;
+  min-width: 120px;
+}
+
+.player-bars .bar.hp .bar-fill {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .player-bars {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 4px;
+  }
+
+  .player-bars .bar.hp {
+    grid-column: 1 / -1;
+    min-width: 0;
+    height: 14px;
+  }
+
+  .player-bars .bar.xp {
+    grid-column: 1 / -1;
+  }
+
+  .player-bars .bar.ult {
+    grid-column: 1;
+  }
+
+  .player-bars .bar.shield {
+    grid-column: 1 / -1;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -5741,10 +5777,6 @@ body.reduce-motion *::after {
                     <span class="depth-value" id="depth-value">1</span>
                     <span class="zone" id="zone-name">灰烬回廊</span>
                   </div>
-                  <div class="hud-top-vitals" aria-label="生命与护盾">
-                    <div class="bar hp"><div class="bar-fill" id="hp-fill"></div><span class="bar-label">生命</span><span class="bar-value" id="hp-value">0 / 0</span></div>
-                    <div class="bar shield is-empty" id="shield-bar"><div class="bar-fill" id="shield-fill"></div><span class="bar-label">护盾</span><span class="bar-value" id="shield-value">0</span></div>
-                  </div>
                   <div class="depth-progress" title="击杀敌人推进深度">
                     <div class="depth-progress-track"><i id="depth-fill"></i></div>
                     <span id="depth-progress-text">0 / 8</span>
@@ -5772,6 +5804,8 @@ body.reduce-motion *::after {
                 <div class="hud-bottom">
                   <div class="hud-left">
                     <div class="player-bars">
+                      <div class="bar hp"><div class="bar-fill" id="hp-fill"></div><span class="bar-label">生命</span><span class="bar-value" id="hp-value">0 / 0</span></div>
+                      <div class="bar shield is-empty" id="shield-bar"><div class="bar-fill" id="shield-fill"></div><span class="bar-label">护盾</span><span class="bar-value" id="shield-value">0</span></div>
                       <div class="bar ult" id="ult-bar"><div class="bar-fill" id="ult-fill"></div><span class="bar-label">燃尽</span><span class="bar-value" id="ult-value">0%</span></div>
                       <div class="bar xp"><div class="bar-fill" id="xp-fill"></div><span class="bar-label">等级 <b id="level-value">1</b></span><span class="bar-value" id="xp-value">0 / 12</span></div>
                     </div>
@@ -5901,7 +5935,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:43:11.392Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T18:46:19.010Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -10481,7 +10515,7 @@ function isTouchLayout() {
 }
 
 function fixedJoystickBase() {
-  return { x: 82, y: Math.max(160, world.height - 104) };
+  return { x: 82, y: Math.max(160, world.height - 180) };
 }
 
 function bindJoystick() {
@@ -11274,7 +11308,7 @@ function drawJoystick(c) {
     c.fillStyle = 'rgba(255,230,200,0.8)';
     c.font = '9px "PingFang SC", sans-serif';
     c.textAlign = 'center';
-    c.fillText('移动', j.sx, j.sy + 82);
+    c.fillText('移动', j.sx, j.sy - 72);
   }
   c.restore();
 }
