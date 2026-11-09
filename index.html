@@ -5956,7 +5956,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-09T19:24:21.931Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-09T19:30:23.207Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -7001,7 +7001,7 @@ const ABILITIES = [
   {
     id: 'singularity', name: '虚井', glyph: '井', cd: 8, role: 'normal', behavior: 'singularityZone',
     element: 'void', color: '#ad86ff', type: '普通 · 持续牵引',
-    desc: (ap) => `在敌群中打开一口持续 5 秒的虚井，不断牵引并按 0.6 秒造成 ${Math.round(52 * ap)}% 范围伤害，结束时爆发。`,
+    desc: (ap) => `在敌群附近随机打开一口持续 5 秒的虚井，缓慢牵引范围内敌人并按 0.6 秒造成 ${Math.round(52 * ap)}% 范围伤害，结束时爆发。`,
     flavor: '井底没有水，只有方向在往下掉。'
   },
   {
@@ -8538,6 +8538,29 @@ function nearestEnemyAt(run, x, y, range = 520, excludeId = null) {
   }
   return best;
 }
+function randomClusterPoint(run, fallbackX, fallbackY) {
+  const alive = run.enemies.filter((enemy) => !enemy.dead);
+  if (!alive.length) return { x: fallbackX, y: fallbackY };
+  const rng = run._rng;
+  let best = null;
+  let bestScore = -1;
+  for (const enemy of alive) {
+    let score = 0;
+    for (const other of alive) {
+      if (other === enemy) continue;
+      if (distance(enemy.x, enemy.y, other.x, other.y) <= 190) score += 1;
+    }
+    if (enemy.boss) score += 1.5;
+    if (score > bestScore) { bestScore = score; best = enemy; }
+  }
+  const angle = rng.range(0, Math.PI * 2);
+  const offset = rng.range(45, 135);
+  return {
+    x: clamp(best.x + Math.cos(angle) * offset, 70, run.arena.w - 70),
+    y: clamp(best.y + Math.sin(angle) * offset, 70, run.arena.h - 70)
+  };
+}
+
 
 function spawnAbilityBullet(run, opts = {}) {
   const player = run.player;
@@ -8956,6 +8979,7 @@ function spawnZone(run, opts) {
     tickInterval: opts.tickInterval || 0.45,
     dmg: opts.dmg,
     element: opts.element || null,
+    pull: opts.pull || 0,
     color: opts.color || '#9fb6ff'
   });
 }
@@ -8964,6 +8988,17 @@ function updateZones(run, dt, events) {
   if (!run.zones || !run.zones.length) return;
   for (const zone of run.zones) {
     zone.remaining -= dt;
+    if (zone.pull) {
+      for (const enemy of run.enemies) {
+        if (enemy.dead || enemy.boss) continue;
+        const d = distance(enemy.x, enemy.y, zone.x, zone.y);
+        if (d > zone.radius * 1.12 || d < 1) continue;
+        const falloff = 0.65 + 0.35 * (1 - d / zone.radius);
+        const step = zone.pull * falloff * dt;
+        enemy.x += ((zone.x - enemy.x) / d) * step;
+        enemy.y += ((zone.y - enemy.y) / d) * step;
+      }
+    }
     zone.tickTimer -= dt;
     if (zone.tickTimer <= 0) {
       zone.tickTimer = zone.tickInterval;
@@ -8971,17 +9006,6 @@ function updateZones(run, dt, events) {
         if (enemy.dead) continue;
         if (distance(enemy.x, enemy.y, zone.x, zone.y) > zone.radius + enemy.radius) continue;
         hitEnemy(run, enemy, zone.dmg, events, { element: zone.element, applyChance: 1 });
-      }
-      if (zone.pull) {
-        for (const enemy of run.enemies) {
-          if (enemy.dead || enemy.boss) continue;
-          const d = distance(enemy.x, enemy.y, zone.x, zone.y);
-          if (d <= zone.radius * 1.15 && d > 1) {
-            const strength = Math.min(d * 0.55, zone.pull);
-            enemy.x += ((zone.x - enemy.x) / d) * strength;
-            enemy.y += ((zone.y - enemy.y) / d) * strength;
-          }
-        }
       }
       pushEvent(events, { type: 'zoneTick', x: zone.x, y: zone.y, radius: zone.radius, color: zone.color });
     }
@@ -9047,8 +9071,8 @@ function castAbility(run, id) {
   const extra = Math.max(0, Math.round(up.count || 0));
   const element = def.element || null;
   const target = nearestEnemyAt(run, player.x, player.y, 760);
-  const tx = target ? target.x : player.x;
-  const ty = target ? target.y : player.y;
+  let tx = target ? target.x : player.x;
+  let ty = target ? target.y : player.y;
   const behavior = def.behavior;
 
   if (behavior === 'gunFan') {
@@ -9131,10 +9155,13 @@ function castAbility(run, id) {
       tickInterval: 0.5, dmg: attack * 0.35, element: 'fire', color: def.color
     });
   } else if (behavior === 'singularityZone') {
-    pullEnemies(run, 340, 170, { x: tx, y: ty });
+    const well = randomClusterPoint(run, tx, ty);
+    run.rngState = run._rng.state;
+    tx = well.x;
+    ty = well.y;
     spawnZone(run, {
       kind: 'singularity', x: tx, y: ty, radius: 175 + extra * 10, duration: 5,
-      tickInterval: 0.6, dmg: attack * 0.5, element: 'void', color: def.color, pull: 55
+      tickInterval: 0.6, dmg: attack * 0.5, element: 'void', color: def.color, pull: 34
     });
     aoeDamage(run, tx, ty, 190, attack * 0.7, events, { element: 'void', color: def.color });
   } else if (behavior === 'bloodOrbit') {
@@ -9165,11 +9192,11 @@ function castAbility(run, id) {
     }
     pushEvent(events, { type: 'banner', title: '冰火陨星', sub: 'FUSION', tone: 'small' });
   } else if (behavior === 'stormriftZone') {
-    pullEnemies(run, 360, 180, { x: tx, y: ty });
+    pullEnemies(run, 360, 55, { x: tx, y: ty });
     chainLightning(run, 8, attack * 0.85, events, 'shock');
     spawnZone(run, {
       kind: 'stormrift', x: tx, y: ty, radius: 190, duration: 4,
-      tickInterval: 0.4, dmg: attack * 0.55, element: 'void', color: def.color
+      tickInterval: 0.4, dmg: attack * 0.55, element: 'void', color: def.color, pull: 24
     });
     fireRing(run, 12, 230, {
       dmg: attack * 0.18, radius: 6, life: 2.2, element: 'shock', color: '#ffd166',
