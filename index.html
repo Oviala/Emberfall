@@ -5956,7 +5956,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-05T19:03:47.772Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-09T19:24:21.931Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -8895,15 +8895,16 @@ function chainLightning(run, targetCount, damage, events, element = 'shock') {
   return points.length - 1;
 }
 
-function pullEnemies(run, radius, strength) {
-  const player = run.player;
+function pullEnemies(run, radius, strength, center = null) {
+  const cx = center ? center.x : run.player.x;
+  const cy = center ? center.y : run.player.y;
   for (const enemy of run.enemies) {
     if (enemy.dead || enemy.boss) continue;
-    const d = distance(enemy.x, enemy.y, player.x, player.y);
+    const d = distance(enemy.x, enemy.y, cx, cy);
     if (d > radius || d < 1) continue;
     const pull = Math.min(d * 0.6, strength);
-    enemy.x += ((player.x - enemy.x) / d) * pull;
-    enemy.y += ((player.y - enemy.y) / d) * pull;
+    enemy.x += ((cx - enemy.x) / d) * pull;
+    enemy.y += ((cy - enemy.y) / d) * pull;
     enemy.x = clamp(enemy.x, enemy.radius, run.arena.w - enemy.radius);
     enemy.y = clamp(enemy.y, enemy.radius, run.arena.h - enemy.radius);
   }
@@ -8970,6 +8971,17 @@ function updateZones(run, dt, events) {
         if (enemy.dead) continue;
         if (distance(enemy.x, enemy.y, zone.x, zone.y) > zone.radius + enemy.radius) continue;
         hitEnemy(run, enemy, zone.dmg, events, { element: zone.element, applyChance: 1 });
+      }
+      if (zone.pull) {
+        for (const enemy of run.enemies) {
+          if (enemy.dead || enemy.boss) continue;
+          const d = distance(enemy.x, enemy.y, zone.x, zone.y);
+          if (d <= zone.radius * 1.15 && d > 1) {
+            const strength = Math.min(d * 0.55, zone.pull);
+            enemy.x += ((zone.x - enemy.x) / d) * strength;
+            enemy.y += ((zone.y - enemy.y) / d) * strength;
+          }
+        }
       }
       pushEvent(events, { type: 'zoneTick', x: zone.x, y: zone.y, radius: zone.radius, color: zone.color });
     }
@@ -9119,10 +9131,10 @@ function castAbility(run, id) {
       tickInterval: 0.5, dmg: attack * 0.35, element: 'fire', color: def.color
     });
   } else if (behavior === 'singularityZone') {
-    pullEnemies(run, 340, 170);
+    pullEnemies(run, 340, 170, { x: tx, y: ty });
     spawnZone(run, {
       kind: 'singularity', x: tx, y: ty, radius: 175 + extra * 10, duration: 5,
-      tickInterval: 0.6, dmg: attack * 0.5, element: 'void', color: def.color
+      tickInterval: 0.6, dmg: attack * 0.5, element: 'void', color: def.color, pull: 55
     });
     aoeDamage(run, tx, ty, 190, attack * 0.7, events, { element: 'void', color: def.color });
   } else if (behavior === 'bloodOrbit') {
@@ -9153,7 +9165,7 @@ function castAbility(run, id) {
     }
     pushEvent(events, { type: 'banner', title: '冰火陨星', sub: 'FUSION', tone: 'small' });
   } else if (behavior === 'stormriftZone') {
-    pullEnemies(run, 360, 180);
+    pullEnemies(run, 360, 180, { x: tx, y: ty });
     chainLightning(run, 8, attack * 0.85, events, 'shock');
     spawnZone(run, {
       kind: 'stormrift', x: tx, y: ty, radius: 190, duration: 4,
