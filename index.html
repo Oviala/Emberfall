@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:38:15.429Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:42:47.943Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -14324,6 +14324,15 @@ function renderArena(ctxApp, run, dt) {
   drawOrbs(c, run);
   drawZones(c, run);
   drawEnemies(c, run);
+  // Boss 美术模块可能改动变换/透明度；画完后强制恢复世界坐标，避免玩家被画到地图外。
+  c.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
+  c.translate(ox + shakeX, oy + shakeY);
+  c.scale(scale, scale);
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = 'source-over';
+  c.filter = 'none';
+  c.setLineDash([]);
+  c.shadowBlur = 0;
   drawProjectiles(c, run);
   drawEnemyShots(c, run);
   drawPlayer(c, run);
