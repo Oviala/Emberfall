@@ -6216,7 +6216,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:22:50.222Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:25:38.665Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -12761,6 +12761,12 @@ function drawBossA(c, index, x, y, radius, time, state) {
   c.restore();
 }
 
+// 预生成指定 Boss 的离屏贴图，避免首次出场时卡顿。
+function prewarmBossA(index) {
+  const i = ((Math.floor(Number(index) || 0) % 6) + 6) % 6;
+  bossSprites(i);
+}
+
 // ── js/ui/boss-art-b.js ──
 // 「烬渊」后六 Boss 的独立 Canvas 2D 美术模块。
 // 坐标以碰撞半径为 1；静态轮廓离屏缓存，每帧只合成呼吸、核心与少量光效。
@@ -13784,6 +13790,12 @@ function drawBossB(c, index, x, y, radius, time, state) {
   c.restore();
 }
 
+// 预生成指定 Boss 的离屏贴图，避免首次出场时卡顿。
+function prewarmBossB(index) {
+  const i = ((Math.floor(Number(index) || 0) % 6) + 6) % 6;
+  bossB_getSprites(i);
+}
+
 // ── js/ui/arena.js ──
 // Canvas 竞技场渲染 + 触屏浮动摇杆。
 // 只负责画面与输入，不修改游戏状态。
@@ -13804,6 +13816,7 @@ const world = {
   oy: 0,
   time: 0,
   shake: 0,
+  prewarmBoss: -1,
   flash: 0,
   flashColor: '#ffd166',
   stars: [],
@@ -14134,6 +14147,17 @@ function renderArena(ctxApp, run, dt) {
 
   // 程序化地图背景（Kimi maps-art.js，离屏缓存）
   c.globalAlpha = 1;
+  // 在本层战斗期间预生成 Boss 贴图，避免 Boss 首次出现时卡一帧。
+  const nextBoss = Math.max(0, (run.depth || 1) - 1) % 12;
+  if (world.prewarmBoss !== nextBoss) {
+    world.prewarmBoss = nextBoss;
+    const warm = () => {
+      if (nextBoss < 6) prewarmBossA(nextBoss);
+      else prewarmBossB(nextBoss - 6);
+    };
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(warm, { timeout: 1200 });
+    else setTimeout(warm, 250);
+  }
   drawMapBackground(c, run.mapIndex || 0, w, h, world.time);
 
   const arena = run.arena;
@@ -14313,18 +14337,27 @@ function drawEnemies(c, run) {
       c.fill();
       c.restore();
       c.save();
-      if (enemy.bossIndex < 6) {
-        drawBossA(c, enemy.bossIndex, enemy.x, enemy.y, r, world.time, {
-          hpRatio: Math.max(0, enemy.hp / enemy.maxHp),
-          hitFlash: enemy.hitFlash || 0,
-          dead: false
-        });
-      } else {
-        drawBossB(c, enemy.bossIndex - 6, enemy.x, enemy.y, r, world.time, {
-          hpRatio: Math.max(0, enemy.hp / enemy.maxHp),
-          hitFlash: enemy.hitFlash || 0,
-          dead: false
-        });
+      try {
+        if (enemy.bossIndex < 6) {
+          drawBossA(c, enemy.bossIndex, enemy.x, enemy.y, r, world.time, {
+            hpRatio: Math.max(0, enemy.hp / enemy.maxHp),
+            hitFlash: enemy.hitFlash || 0,
+            dead: false
+          });
+        } else {
+          drawBossB(c, enemy.bossIndex - 6, enemy.x, enemy.y, r, world.time, {
+            hpRatio: Math.max(0, enemy.hp / enemy.maxHp),
+            hitFlash: enemy.hitFlash || 0,
+            dead: false
+          });
+        }
+      } catch {
+        // 极旧浏览器 / 不支持的 Canvas 环境下退化为发光圆环，保证游戏循环不中断。
+        c.strokeStyle = enemy.tint;
+        c.lineWidth = 3;
+        c.beginPath();
+        c.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
+        c.stroke();
       }
       c.restore();
     } else {
