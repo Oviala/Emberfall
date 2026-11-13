@@ -5956,7 +5956,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T06:06:48.924Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T12:47:12.967Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6006,16 +6006,16 @@ const BAL = {
   // v4 阶段性技能槽：深度 1/5/10/16/22/30，最多 6 个主动技能位。
   skillSlots: [
     { depth: 1, slots: 1 },
-    { depth: 5, slots: 2 },
-    { depth: 10, slots: 3 },
-    { depth: 16, slots: 4 },
-    { depth: 22, slots: 5 },
-    { depth: 30, slots: 6 }
+    { depth: 8, slots: 2 },
+    { depth: 15, slots: 3 },
+    { depth: 24, slots: 4 },
+    { depth: 35, slots: 5 },
+    { depth: 48, slots: 6 }
   ],
   enemy: {
-    hpBase: 29,
+    hpBase: 26,
     atkBase: 6.1,
-    hpGrowth: 1.115,
+    hpGrowth: 1.11,
     atkGrowth: 1.077,
     maxAliveBase: 6,
     maxAlivePerDepth: 1.1,
@@ -6048,6 +6048,7 @@ const BAL = {
     nextBase: 16,
     growth: 1.25
   },
+  skillDamageMult: 1.18,
   level: {
     baseRerolls: 1,
     draftSize: 3
@@ -9072,7 +9073,7 @@ function castAbility(run, id) {
   const player = run.player;
   const up = skillUpgrade(run, id);
   run.abilityCd[id] = abilityCooldown(run, id);
-  const attack = stats.atk * ap * (1 + (up.dmgPct || 0));
+  const attack = stats.atk * ap * BAL.skillDamageMult * (1 + (up.dmgPct || 0));
   const extra = Math.max(0, Math.round(up.count || 0));
   const element = def.element || null;
   const target = nearestEnemyAt(run, player.x, player.y, 760);
@@ -12126,7 +12127,7 @@ function section(title, subtitle, body) {
 function guideSection() {
   const steps = [
     ['走位与射击', 'WASD / 方向键（触屏拖动战斗区）移动。角色自动锁敌射击；开局没有主动技能，首次升级时选择根节点获得技能。'],
-    ['14 技能与 6 格', '14 个主动技能分为速射（0.7–1.4 秒）、普通（4.5–8 秒）与重型（9–12 秒）。技能槽在深度 1 / 5 / 10 / 16 / 22 / 30 解锁 1–6 格，技能栏始终保留占位。'],
+    ['14 技能与 6 格', '14 个主动技能分为速射（0.7–1.4 秒）、普通（4.5–8 秒）与重型（9–12 秒）。技能槽在深度 1 / 8 / 15 / 24 / 35 / 48 解锁 1–6 格，技能栏始终保留占位。'],
     ['技能详情与冷却', '点击圆形技能图标查看名称、元素、真实冷却与共鸣；手机无需 hover。HUD 冷却由引擎按基础 cd、CDR 与技能冷却强化共同结算。'],
     ['升级三选一', '每次升级混合三类：树节点卡、可重复的技能随机数值卡、普通卡牌。每张都会标注类别与关键收益；手机可横向滑动。'],
     ['43 节点只读星图', '核心 + 14 根节点 + 14 进阶 + 14 跨系，共 43 个节点。星图可缩放与聚焦分支，但不能购买或直接加点，只能经升级三选一点亮。'],
@@ -13312,7 +13313,7 @@ function openTutorial(ctx) {
 function buildTutorial(ctx) {
   const steps = [
     ['走位与第一技能', 'WASD / 方向键（手机拖动战斗区）移动，角色自动锁敌射击。开局没有主动技能，首次升级三选一中选择技能根节点来获得第一个技能。'],
-    ['14 技能 · 6 格', '14 个主动技能分为速射、普通与重型。技能槽在深度 1 / 5 / 10 / 16 / 22 / 30 逐步解锁，最多 6 个；点击圆形图标可查看真实冷却和技能详情。'],
+    ['14 技能 · 6 格', '14 个主动技能分为速射、普通与重型。技能槽在深度 1 / 8 / 15 / 24 / 35 / 48 逐步解锁，最多 6 个；点击圆形图标可查看真实冷却和技能详情。'],
     ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
     ['组合无需购买', '普通组合需双方各 3 点共鸣，强共鸣各 4 点；合成需双方各 4 点且都点亮进阶。数值强化与进阶积累共鸣，组合图鉴只用于查看目标与进度。'],
     ['带回魂火', '死亡或主动撤退都会结算魂火。魂火用于余烬祭坛的永久强化；达到深度门槛可轮回换星屑。'],
