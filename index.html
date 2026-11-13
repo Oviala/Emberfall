@@ -5988,6 +5988,31 @@ body.reduce-motion *::after {
   }
 }
 
+/* 主页难度层选择 */
+.idle-layer-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.layer-select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 6px;
+  outline: none;
+}
+
 </style>
 </head>
 <body>
@@ -6060,7 +6085,7 @@ body.reduce-motion *::after {
                   </div>
                   <div class="depth-progress" title="本层击杀进度">
                     <div class="depth-progress-track"><i id="depth-fill"></i></div>
-                    <span id="depth-progress-text">0 / 12</span>
+                    <span id="depth-progress-text">BOSS 05:00</span>
                   </div>
                   <span class="hud-pressure" id="pressure-value">压力 ×1.00</span>
                   <div class="hud-actions">
@@ -6216,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:25:38.665Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:38:15.429Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6299,8 +6324,8 @@ const BAL = {
     bossBurstCount: 10,
     xpBase: 3.2,
     xpPerDepth: 0.55,
-    goldBase: 2,
-    goldPerDepth: 0.42,
+    goldBase: 1.2,
+    goldPerDepth: 0.22,
     pressureStart: 150,
     pressurePerMinute: 0.16
   },
@@ -6319,10 +6344,24 @@ const BAL = {
     sizeCap: 24,
     eliteFromLayer: 4
   },
+  layers: {
+    bossAtBase: 300,
+    bossAtPerLayer: 40,
+    shopAt: [0.55, 0.85],
+    maxLayer: 10
+  },
   shop: {
     everyLayers: 5,
-    cardCost: { common: 32, rare: 58, epic: 92, cursed: 70 },
-    relicCost: 95
+    cardCost: { common: 26, rare: 48, epic: 78, cursed: 60 },
+    relicCost: 120,
+    maxPurchasePerShop: 1,
+    maxRerolls: 2,
+    rerollCost: 30
+  },
+  draft: {
+    freeRerolls: 1,
+    maxPaidRerolls: 2,
+    paidRerollCost: 35
   },
   level: {
     baseRerolls: 1,
@@ -7512,6 +7551,7 @@ function createMeta(now = Date.now()) {
     embers: 0,
     totalEmbers: 0,
     bestDepth: 0, // 本轮（本次轮回后）最深
+    maxLayer: 1,
     allTimeBest: 0,
     allTimeBestRunEmbers: 0,
     tree: {},
@@ -7740,6 +7780,26 @@ function bossAtIndex(index) {
   return BOSSES[index % BOSSES.length];
 }
 
+// ── js/data/layers.js ──
+// 难度层定义：一层 = 一局。每层固定地图/Boss，并叠加特殊机制。
+const LAYERS = [
+  { name: '灰烬回廊', desc: '基础下潜', enemySpeed: 1, eliteBonus: 0, spawnRate: 1, bossHp: 1 },
+  { name: '低语岔口', desc: '敌群移速 +8%', enemySpeed: 1.08, eliteBonus: 0, spawnRate: 1, bossHp: 1 },
+  { name: '苔蚀阶梯', desc: '精英出现率提高', enemySpeed: 1.03, eliteBonus: 0.04, spawnRate: 1, bossHp: 1 },
+  { name: '碎镜之厅', desc: '刷新更密集', enemySpeed: 1.04, eliteBonus: 0.02, spawnRate: 1.18, bossHp: 1 },
+  { name: '无光深井', desc: '首领生命 +25%', enemySpeed: 1.05, eliteBonus: 0.02, spawnRate: 1, bossHp: 1.25 },
+  { name: '骨桥', desc: '敌群移速 +12%', enemySpeed: 1.12, eliteBonus: 0.03, spawnRate: 1.05, bossHp: 1.1 },
+  { name: '星落平原', desc: '精英更多、首领更硬', enemySpeed: 1.06, eliteBonus: 0.06, spawnRate: 1.08, bossHp: 1.2 },
+  { name: '潮汐墓场', desc: '刷怪速度大幅提高', enemySpeed: 1.05, eliteBonus: 0.03, spawnRate: 1.3, bossHp: 1.1 },
+  { name: '凝滞之庭', desc: '敌群又硬又快', enemySpeed: 1.16, eliteBonus: 0.05, spawnRate: 1.12, bossHp: 1.3 },
+  { name: '深渊心室', desc: '终末难度：全面强化', enemySpeed: 1.2, eliteBonus: 0.08, spawnRate: 1.25, bossHp: 1.45 }
+];
+
+function layerInfo(layer) {
+  const index = Math.max(0, Math.min(LAYERS.length - 1, (Math.floor(layer) || 1) - 1));
+  return LAYERS[index];
+}
+
 // ── js/data/elements.js ──
 // 元素与元素反应表。
 // 技能命中会给敌人附加元素印记；不同元素相遇会触发反应。
@@ -7915,6 +7975,7 @@ function runNodeAvailable(run, node) {
 
 
 
+
 const STEP = 1 / 30;
 const MAX_EVENTS = 160;
 const DEFAULT_ARENA = { w: 1120, h: 680 };
@@ -7935,14 +7996,26 @@ function pushLog(run, text) {
 
 function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0, opts = {}) {
   const arena = { ...DEFAULT_ARENA, ...(opts.arena || {}) };
+  const layer = Math.max(1, Math.min(BAL.layers.maxLayer, Math.floor(opts.layer || 1)));
+  const layerDef = layerInfo(layer);
   const run = {
+    layerDef,
+    layer,
+    bossAt: BAL.layers.bossAtBase + (layer - 1) * BAL.layers.bossAtPerLayer,
+    bossSpawned: false,
+    victory: false,
+    shopMilestones: [],
+    shopTaken: [],
+    shopBought: false,
+    shopRerolls: 0,
+    paidRerolls: 0,
     seed: seed >>> 0,
     arena,
     active: true,
     ended: false,
     paused: false,
     died: false,
-    depth: 1,
+    depth: layer,
     depthProgress: 0,
     wave: 1,
     wavesPerLayer: BAL.waves.base,
@@ -7950,7 +8023,7 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     bossWave: false,
     killsNeeded: 12,
     shopOffer: null,
-    mapIndex: 0,
+    mapIndex: (layer - 1) % 6,
     layersCleared: 0,
     skillCap: skillSlotsAt(1),
     kills: 0,
@@ -8011,15 +8084,15 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     log: [],
     lastProgressAt: 0
   };
-  run.killsNeeded = killsNeededFor(run.depth);
   run._rng = new Rng(run.seed);
   run.rngState = run._rng.state;
   recomputeStats(run);
   run.hp = run.maxHp;
   run.shield = Math.min(run.stats.shieldCap, run.maxHp * run.stats.startShieldPct);
   run.gold = run.stats.startGold;
-  run.freeRerolls = run.stats.rerollBonus;
-  pushLog(run, `第 1 层 · ${zoneName(1)} · 深渊开始`);
+  run.freeRerolls = BAL.draft.freeRerolls + run.stats.rerollBonus;
+  run.shopMilestones = BAL.layers.shopAt.map((ratio) => Math.round(run.bossAt * ratio));
+  pushLog(run, `第 ${layer} 层 · ${zoneName(layer)} · 深渊开始`);
   return run;
 }
 
@@ -8279,7 +8352,7 @@ function makeEnemy(run, rng, kind, arch, x, y) {
   let atk = e.atkBase * atkScale * arch.atk;
   let radius = arch.radius;
   let armor = arch.armor;
-  let speed = arch.speed * (1 + Math.min(0.3, depth * 0.0035));
+  let speed = arch.speed * (1 + Math.min(0.3, depth * 0.0035)) * (run.layerDef?.enemySpeed || 1);
   let xp = e.xpBase + depth * e.xpPerDepth;
   let gold = e.goldBase + depth * e.goldPerDepth;
   const boss = kind === 'boss';
@@ -8305,7 +8378,7 @@ function makeEnemy(run, rng, kind, arch, x, y) {
     name = bossDef.name;
     glyph = bossDef.glyph;
     tint = '#ffd166';
-    hp = e.hpBase * hpScale * e.bossHpMult * (1 + index * 0.06);
+    hp = e.hpBase * hpScale * e.bossHpMult * (1 + index * 0.06) * (run.layerDef?.bossHp || 1);
     atk = e.atkBase * atkScale * e.bossAtkMult * (1 + index * 0.04);
     radius = e.bossRadius;
     armor = 10 + index * 4;
@@ -8647,7 +8720,10 @@ function killEnemy(run, enemy, events) {
   if (!enemy.boss) run.depthProgress += 1;
   if (enemy.boss) {
     pushLog(run, `击败首领「${enemy.name}」`);
-    offerRelics(run, events);
+    run.victory = true;
+    run.active = false;
+    run.ended = true;
+    pushEvent(events, { type: 'victory', layer: run.layer });
   }
 }
 
@@ -8700,34 +8776,47 @@ function damagePlayer(run, raw, events, opts = {}) {
 
 function updateSpawning(run, dt, events) {
   if (run.shopOffer) return;
-  if (run.bossWave) {
-    const bossAlive = run.enemies.some((enemy) => enemy.boss && !enemy.dead);
-    if (!bossAlive) completeLayer(run, events);
+  if (run.bossSpawned) {
+    if (!run.enemies.some((enemy) => enemy.boss && !enemy.dead)) {
+      run.victory = true;
+      run.active = false;
+      run.ended = true;
+      pushEvent(events, { type: 'victory', layer: run.layer });
+    }
     return;
   }
-  if (run.depthProgress >= run.killsNeeded) {
-    run.bossWave = true;
+  // 一局两次商店：中期、Boss 前
+  for (let i = 0; i < run.shopMilestones.length; i++) {
+    if (!run.shopTaken[i] && run.elapsed >= run.shopMilestones[i]) {
+      run.shopTaken[i] = true;
+      openLayerShop(run, events);
+      return;
+    }
+  }
+  if (run.elapsed >= run.bossAt) {
+    run.bossSpawned = true;
     spawnBoss(run, events);
     return;
   }
+  const e = BAL.enemy;
   if (run.spawnTimer > 0) run.spawnTimer -= dt;
   if (run.spawnTimer > 0) return;
-  spawnBurst(run, events);
-}
-
-function completeLayer(run, events) {
-  if (!run.active) return;
-  run.depth += 1;
-  run.layersCleared += 1;
-  run.depthProgress = 0;
-  run.killsNeeded = killsNeededFor(run.depth);
-  run.wave = 1;
-  run.wavesPerLayer = wavesForLayer(run.depth);
-  run.waveSpawned = false;
-  run.bossWave = false;
-  run.mapIndex = Math.floor((run.depth - 1) / 3);
-  onDepthUp(run, events);
-  if (run.depth % BAL.shop.everyLayers === 0) openLayerShop(run, events);
+  const alive = run.enemies.filter((enemy) => !enemy.dead && !enemy.boss).length;
+  const maxAlive = Math.min(e.maxAliveCap, Math.floor(e.maxAliveBase + run.layer * e.maxAlivePerDepth));
+  if (alive >= maxAlive) {
+    run.spawnTimer = 0.3;
+    return;
+  }
+  const batch = 1 + Math.floor(run.layer / 8);
+  const eliteChance = Math.min(e.eliteChanceMax, e.eliteChanceBase + run.layer * e.eliteChancePerDepth + (run.layerDef?.eliteBonus || 0));
+  for (let i = 0; i < batch; i++) {
+    const kind = run.layer >= 3 && run._rng.chance(eliteChance) ? 'elite' : 'normal';
+    spawnEnemy(run, kind);
+  }
+  run.spawnTimer = Math.max(
+    e.spawnIntervalMin,
+    e.spawnIntervalBase - run.layer * 0.012 - run.elapsed * e.spawnTimeFactor
+  ) * (run.layerDef?.spawnRate || 1) * run._rng.range(0.85, 1.15);
 }
 
 function updatePlayerProjectiles(run, dt, events) {
@@ -9755,12 +9844,18 @@ function rerollDraft(run) {
     run.draft.choices = rollDraft(run);
     return { ok: true, free: true, left: run.freeRerolls };
   }
-  if (run.gold < BAL.rerollCost) {
-    return { ok: false, reason: '金币不足', cost: BAL.rerollCost, gold: run.gold };
+  const paid = run.paidRerolls || 0;
+  if (paid >= BAL.draft.maxPaidRerolls) {
+    return { ok: false, reason: '本局刷新次数已用完' };
   }
-  run.gold -= BAL.rerollCost;
+  const cost = BAL.draft.paidRerollCost;
+  if (run.gold < cost) {
+    return { ok: false, reason: '金币不足', cost, gold: run.gold };
+  }
+  run.gold -= cost;
+  run.paidRerolls = paid + 1;
   run.draft.choices = rollDraft(run);
-  return { ok: true, free: false, left: 0, cost: BAL.rerollCost };
+  return { ok: true, free: false, left: BAL.draft.maxPaidRerolls - run.paidRerolls, cost };
 }
 
 function openLayerShop(run, events = []) {
@@ -9789,6 +9884,7 @@ function openLayerShop(run, events = []) {
       cost: BAL.shop.relicCost, sold: false
     });
   }
+  run.shopBought = false;
   run.shopOffer = offers;
   run.rngState = rng.state;
   pushEvent(events, { type: 'shop', offers: offers.length });
@@ -9798,8 +9894,11 @@ function buyShopItem(run, index) {
   const offer = run.shopOffer && run.shopOffer[index];
   if (!offer) return { ok: false, reason: '商品不存在' };
   if (offer.sold) return { ok: false, reason: '已售出' };
-  if (run.gold < offer.cost) return { ok: false, reason: '金币不足' };
-  run.gold -= offer.cost;
+  if (run.shopBought) return { ok: false, reason: '本商店已购买过' };
+  const price = Math.round(offer.cost * (1 + Math.max(0, run.layer - 1) * 0.18));
+  if (run.gold < price) return { ok: false, reason: '金币不足' };
+  run.gold -= price;
+  run.shopBought = true;
   offer.sold = true;
   if (offer.kind === 'card') {
     run.cardCounts[offer.id] = (run.cardCounts[offer.id] || 0) + 1;
@@ -9954,7 +10053,7 @@ function emberPreview(run) {
   return base + Math.floor(run.gold / BAL.ember.goldDivisor);
 }
 
-function finishRun(meta, run, { died = false } = {}) {
+function finishRun(meta, run, { died = false, victory = false } = {}) {
   if (run.ended && run.report) return run.report;
   const base = emberReward(run.depth, run.stats ? run.stats.emberGain : 0, run.stardust, died);
   const goldEmbers = Math.floor(run.gold / BAL.ember.goldDivisor);
@@ -9965,13 +10064,17 @@ function finishRun(meta, run, { died = false } = {}) {
   meta.kills += run.kills;
   meta.playSeconds += run.elapsed;
   const prevBest = meta.bestDepth || 0;
-  meta.bestDepth = Math.max(meta.bestDepth || 0, run.depth);
-  meta.allTimeBest = Math.max(meta.allTimeBest || 0, run.depth);
+  meta.bestDepth = Math.max(meta.bestDepth || 0, run.layer || run.depth);
+  meta.allTimeBest = Math.max(meta.allTimeBest || 0, run.layer || run.depth);
+  const layer = run.layer || run.depth || 1;
+  meta.maxLayer = Math.max(meta.maxLayer || 1, victory ? Math.min(BAL.layers.maxLayer, layer + 1) : layer);
   if (embers > (meta.allTimeBestRunEmbers || 0)) meta.allTimeBestRunEmbers = embers;
   run.active = false;
   run.ended = true;
   const report = {
-    depth: run.depth,
+    depth: layer,
+    layer,
+    victory,
     kills: run.kills,
     gold: run.gold,
     embers,
@@ -9984,11 +10087,11 @@ function finishRun(meta, run, { died = false } = {}) {
     cardCounts: { ...run.cardCounts },
     fusions: (run.fusions || []).slice(),
     synergyIds: (run.synergyIds || []).slice(),
-    newBest: run.depth > prevBest,
-    zone: zoneName(run.depth)
+    newBest: layer > prevBest,
+    zone: zoneName(layer),
   };
   run.report = report;
-  pushLog(run, died ? '本次下潜结束' : '主动撤退，带着魂火返回');
+  pushLog(run, victory ? '本层通关，深渊记住了你' : died ? '本次下潜结束' : '主动撤退，带着魂火返回');
   return report;
 }
 
@@ -14768,6 +14871,7 @@ function drawJoystick(c) {
 
 
 
+
 const delveEls = {};
 let lastStatsAt = 0;
 let lastLogKey = '';
@@ -14899,6 +15003,15 @@ function renderIdle(ctx) {
       h('p', { class: 'idle-tagline' }, 'THE ABYSS AWAITS'),
       h('p', { class: 'idle-lead' },
         '向下走。收集技能，养出共鸣，在每层首领倒下前活下来。'
+      ),
+      h('div', { class: 'idle-layer-row' },
+        h('span', {}, '难度层'),
+        h('select', { class: 'layer-select', onchange: (event) => ctx.setLayer(event.target.value) },
+          Array.from({ length: Math.max(1, meta.maxLayer || 1) }, (_, i) => {
+            const value = i + 1;
+            return h('option', { value, selected: value === (ctx.ui?.selectedLayer || meta.maxLayer || 1), title: LAYERS[value - 1]?.desc || '' }, `第 ${value} 层 · ${LAYERS[value - 1]?.desc || ''}`);
+          })
+        )
       ),
       h('button', { class: 'btn btn-primary btn-lg', 'data-start-run': '' },
         '开始下潜', h('kbd', {}, 'Enter')
@@ -15096,11 +15209,12 @@ function updateRun(ctx) {
   delveEls.xpValue.textContent = `${fmtInt(run.xp)} / ${fmtInt(run.xpNext)}`;
   delveEls.levelValue.textContent = run.level;
 
-  const neededKills = Math.max(1, run.killsNeeded || 12);
-  const killProgress = run.bossWave ? 100 : Math.min(100, (run.depthProgress / neededKills) * 100);
-  delveEls.depthFill.style.width = `${killProgress}%`;
-  delveEls.depthText.textContent = run.bossWave ? 'BOSS' : `${Math.min(run.depthProgress, neededKills)} / ${neededKills}`;
-  delveEls.depthFill.parentElement?.setAttribute('title', run.bossWave ? '本层首领战' : '本层击杀进度');
+  const bossAt = Math.max(1, run.bossAt || 300);
+  const bossProgress = run.bossSpawned ? 100 : Math.min(100, (run.elapsed / bossAt) * 100);
+  delveEls.depthFill.style.width = `${bossProgress}%`;
+  const remain = Math.max(0, bossAt - run.elapsed);
+  delveEls.depthText.textContent = run.bossSpawned ? 'BOSS' : `BOSS ${Math.floor(remain / 60)}:${String(Math.floor(remain % 60)).padStart(2, '0')}`;
+  delveEls.depthFill.parentElement?.setAttribute('title', run.bossSpawned ? '本层首领战' : '距离本层首领');
   delveEls.depth.textContent = run.depth;
   if (delveEls.pressure) delveEls.pressure.textContent = `压力 ×${abyssPressure(run).toFixed(2)}`;
   if (delveEls.watermark) delveEls.watermark.textContent = run.depth;
@@ -15503,7 +15617,7 @@ function guideSection() {
     ['普通 / 强共鸣', '全部组合免费可见。普通组合需双方各 3 点共鸣，强共鸣需双方各 4 点；达标后自动生效，图鉴会显示每个组件的进度。'],
     ['技能合成', '冰火陨星、雷狱裂隙、血誓星盾需组件双方各 4 点共鸣且都点亮进阶，合成卡才会进入三选一；合成后保留相关共鸣。'],
     ['元素印记', '火 / 冰 / 雷 / 虚技能命中会留下元素印记。两个不同元素相遇触发蒸发、超载、超导、燃魂、湮灭或雷暴。'],
-    ['刷怪与层数', '每层采用导演式刷怪，节奏忽快忽慢；击杀攒满本层进度后挑战本层首领。击败首领进入下一层。'],
+    ['层 = 一局', '每层是独立一局：从主页选层进入，连续刷怪，击败本层 Boss 后通关并解锁下一层。'],
     ['魂火与轮回', '死亡或主动撤退都会结算魂火，用于余烬祭坛永久强化；达到门槛可轮回换星屑。组合图鉴不消耗魂火，也不写解锁存档。'],
     ['自动战斗', '开启「自动」后 AI 会走位、放技能、选卡并继续下一局；停滞 100 秒自动撤退。手动模式可用 1–6 或技能详情面板施法。']
   ];
@@ -16528,9 +16642,14 @@ function buildDraft(ctx, spec) {
   mount(modal, grid, h('p', { class: 'draft-swipe-hint' }, '左右滑动查看 3 项 · 点选一张'));
 
   const free = run.freeRerolls || 0;
-  const cost = BAL.rerollCost;
-  const canReroll = free > 0 || run.gold >= cost;
-  const rerollLabel = free > 0 ? `重抽 · 免费 ×${free}` : `重抽 · ${cost} 金币`;
+  const paidLeft = Math.max(0, (BAL.draft?.maxPaidRerolls || 2) - (run.paidRerolls || 0));
+  const cost = BAL.draft?.paidRerollCost || 35;
+  const canReroll = free > 0 || (paidLeft > 0 && run.gold >= cost);
+  const rerollLabel = free > 0
+    ? `重抽 · 免费 ×${free}`
+    : paidLeft > 0
+      ? `重抽 · ${cost} 金币（剩 ${paidLeft}）`
+      : '刷新已用完';
   const foot = h('div', { class: 'modal-foot' },
     h('button', { class: 'btn btn-ghost', disabled: !canReroll, onclick: () => ctx.rerollDraft() }, rerollLabel),
     h('span', { class: 'tag subtle' }, `金币 ${fmtInt(run.gold)}`)
@@ -16559,8 +16678,10 @@ function buildShop(ctx) {
     )
   );
   const grid = h('div', { class: 'shop-grid' });
+  const priceOf = (offer) => Math.round(offer.cost * (1 + Math.max(0, (run.layer || 1) - 1) * 0.18));
   run.shopOffer.forEach((offer, index) => {
-    const affordable = run.gold >= offer.cost && !offer.sold;
+    const price = priceOf(offer);
+    const affordable = run.gold >= price && !offer.sold && !run.shopBought;
     const button = h('button', {
       class: `shop-item${offer.sold ? ' sold' : ''}`,
       disabled: !affordable,
@@ -16572,13 +16693,13 @@ function buildShop(ctx) {
         h('small', {}, offer.kind === 'relic' ? '遗物' : '卡牌'),
         h('p', {}, offer.desc || '')
       ),
-      h('span', { class: 'shop-cost' }, offer.sold ? '已售出' : `✦ ${fmtInt(offer.cost)}`)
+      h('span', { class: 'shop-cost' }, offer.sold ? '已售出' : `✦ ${fmtInt(price)}`)
     );
     mount(grid, button);
   });
   mount(modal, grid);
   mount(modal, h('div', { class: 'shop-actions' },
-    h('span', { class: 'muted' }, '购买后立即生效'),
+    h('span', { class: 'muted' }, run.shopBought ? '本商店已购买 1 件，继续下潜吧' : '每次商店最多购买 1 件'),
     h('button', { class: 'btn btn-primary', onclick: () => ctx.closeShop() }, '继续下潜')
   ));
   return modal;
@@ -16638,8 +16759,8 @@ function buildReport(ctx, spec) {
   const modal = h('div', { class: 'modal report-modal' });
   mount(modal, 
     h('div', { class: 'modal-head' },
-      h('p', { class: 'eyebrow' }, report.died ? 'THE ABYSS CLAIMS YOU' : 'RETURN WITH EMBERS'),
-      h('h2', { class: 'modal-title' }, report.died ? '倒在了深渊里' : '主动撤退'),
+      h('p', { class: 'eyebrow' }, report.victory ? 'LAYER CLEARED' : report.died ? 'THE ABYSS CLAIMS YOU' : 'RETURN WITH EMBERS'),
+      h('h2', { class: 'modal-title' }, report.victory ? '本层通关' : report.died ? '倒在了深渊里' : '主动撤退'),
       h('div', { class: 'report-depth' }, String(report.depth), h('small', {}, '层')),
       h('div', { class: 'report-zone' }, report.zone)
     ),
@@ -16727,7 +16848,7 @@ function buildTutorial(ctx) {
   const steps = [
     ['走位与第一技能', 'WASD / 方向键（手机拖动战斗区）移动，角色自动锁敌射击。开局没有主动技能，首次升级三选一中选择技能根节点来获得第一个技能。'],
     ['14 技能 · 6 格', '14 个主动技能分为速射、普通与重型。技能槽在深度 1 / 8 / 15 / 24 / 35 / 48 逐步解锁，最多 6 个；点击圆形图标可查看真实冷却和技能详情。'],
-    ['刷怪与商店', '每层采用导演式刷怪，节奏忽快忽慢；击杀攒满本层进度后打本层首领。每通过 5 层出现一次层间商店，用金币买卡牌或遗物。'],
+    ['层 = 一局', '每层是独立一局：主页选层，连续刷怪，击败本层 Boss 后通关并解锁下一层；每局两次商店，每次最多买一件。'],
     ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
     ['组合无需购买', '普通组合需双方各 3 点共鸣，强共鸣各 4 点；合成需双方各 4 点且都点亮进阶。数值强化与进阶积累共鸣，组合图鉴只用于查看目标与进度。'],
     ['带回魂火', '死亡或主动撤退都会结算魂火。魂火用于余烬祭坛的永久强化；达到深度门槛可轮回换星屑。'],
@@ -16879,6 +17000,7 @@ function createApp() {
 
   const ui = {
     tab: 'delve',
+    selectedLayer: meta.maxLayer || 1,
     treeReady: false,
     comboReady: false,
     skillTreeOpen: false,
@@ -16928,7 +17050,8 @@ function createApp() {
       if (run && run.active) return;
       if (hasModal() && activeModalType() === 'report') closeModal(ctx);
       showRunView(ctx);
-      run = createRun(meta, undefined, { arena: suggestArenaSize() });
+      const layer = Math.max(1, Math.min(meta.maxLayer || 1, ui.selectedLayer || 1));
+      run = createRun(meta, undefined, { arena: suggestArenaSize(), layer });
       run.autoPilot = !!meta.settings.autoDelve;
       run.autoCast = !!(meta.settings.autoCast || meta.settings.autoDelve);
       run.autoSkills = meta.settings.autoSkills !== false;
@@ -16945,6 +17068,9 @@ function createApp() {
       banner('开始下潜', 'THE DESCENT BEGINS');
       if (!silent) goTab('delve');
       requestAnimationFrame(() => handleArenaResize());
+    },
+    setLayer(value) {
+      ui.selectedLayer = Math.max(1, Math.min(meta.maxLayer || 1, Number(value) || 1));
     },
     retreat() {
       if (!run || !run.active) return;
@@ -17384,10 +17510,11 @@ function createApp() {
   function handleRunEnd() {
     if (!run || !run.ended || ui.endedHandled) return;
     ui.endedHandled = true;
-    const report = finishRun(meta, run, { died: run.died });
+    const report = finishRun(meta, run, { died: run.died, victory: run.victory });
     meta.run = null;
     run = null;
     ui.wasRunActive = false;
+    ui.selectedLayer = meta.maxLayer || 1;
     ui.seenDraft = null;
     ui.seenRelic = null;
     ctx.save();
@@ -17398,7 +17525,7 @@ function createApp() {
   function handleRunEnded(report) {
     renderIdleIfVisible();
     resetModals(ctx);
-    play(report.died ? 'death' : 'relic');
+    play(report.victory ? 'level' : report.died ? 'death' : 'relic');
     openReport(ctx, report);
     if (meta.settings.autoDelve) ui.autoNextAt = performance.now() + 3600;
     refreshHeader();
