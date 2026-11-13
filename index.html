@@ -5811,6 +5811,183 @@ body.reduce-motion *::after {
   }
 }
 
+/* ── v6 液态玻璃主页 ── */
+.delve-idle {
+  background:
+    radial-gradient(900px 520px at 50% 0%, rgba(255, 125, 71, 0.16), transparent 66%),
+    radial-gradient(700px 480px at 90% 80%, rgba(180, 140, 255, 0.12), transparent 70%);
+}
+
+.idle-wrap {
+  max-width: 980px;
+  gap: 12px;
+  padding: 12px 0 18px;
+}
+
+.idle-hero {
+  min-height: min(64vh, 560px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 38px 30px 34px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025) 42%, rgba(255, 125, 71, 0.06)),
+    rgba(12, 14, 23, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 30px 80px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(26px) saturate(155%);
+  -webkit-backdrop-filter: blur(26px) saturate(155%);
+  overflow: hidden;
+}
+
+.idle-hero::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -60%;
+  width: 50%;
+  height: 180%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+  animation: glass-sheen 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glass-sheen {
+  0%, 55% { left: -60%; opacity: 0; }
+  70% { opacity: 1; }
+  100% { left: 120%; opacity: 0; }
+}
+
+.idle-mark {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 12px;
+}
+
+.idle-overline {
+  font-family: var(--font-num);
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  color: rgba(255, 220, 186, 0.65);
+  margin-bottom: 2px;
+}
+
+.idle-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(58px, 9vw, 92px);
+  line-height: 0.95;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  font-weight: 600;
+  color: #fff3e4;
+  text-shadow:
+    0 0 18px rgba(255, 125, 71, 0.28),
+    0 0 70px rgba(255, 125, 71, 0.18);
+}
+
+.idle-tagline {
+  margin: 10px 0 0;
+  font-family: var(--font-num);
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  color: var(--faint);
+}
+
+.idle-lead {
+  max-width: 430px;
+  margin: 16px auto 22px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+.idle-hero .btn-lg {
+  min-width: 230px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 236, 211, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 222, 186, 0.95), rgba(255, 126, 72, 0.92));
+  box-shadow:
+    0 0 0 5px rgba(255, 255, 255, 0.06),
+    0 18px 44px rgba(255, 100, 50, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  color: #2a0f06;
+}
+
+.idle-quick {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.idle-quick span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--faint);
+  font-size: 9px;
+}
+
+.idle-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.idle-card {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02)),
+    rgba(12, 14, 23, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  padding: 15px 16px;
+}
+
+.idle-card b {
+  font-size: 24px;
+}
+
+.idle-build {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+@media (max-width: 720px) {
+  .idle-wrap {
+    padding-top: 6px;
+  }
+  .idle-hero {
+    min-height: 0;
+    padding: 26px 16px 24px;
+    border-radius: 24px;
+  }
+  .idle-title {
+    font-size: 60px;
+  }
+  .idle-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .idle-build {
+    display: none;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -6039,7 +6216,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T16:11:23.273Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T16:13:28.550Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -11724,10 +11901,11 @@ function renderIdle(ctx) {
   const wrap = h('div', { class: 'idle-wrap' },
     h('section', { class: 'panel idle-hero' },
       h('div', { class: 'idle-mark' }, h('img', { class: 'idle-sigil', src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9ImJnIiBjeD0iNTAlIiBjeT0iMzIlIiByPSI3OCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMjQxMTBiIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iNjIlIiBzdG9wLWNvbG9yPSIjMGIwZDE0Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzA2MDcwYiIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZW1iZXIiIHgxPSIzMiIgeTE9IjEwIiB4Mj0iMzIiIHkyPSI1MiIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZmZlM2IwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iNDIlIiBzdG9wLWNvbG9yPSIjZmY5YTU4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2Q5NDMxZiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icmltIiB4MT0iMTIiIHkxPSIzMiIgeDI9IjUyIiB5Mj0iMzIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2ZmN2Q0NyIgc3RvcC1vcGFjaXR5PSIwLjE1Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjZmZkMTY2IiBzdG9wLW9wYWNpdHk9IjAuOTUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZmY3ZDQ3IiBzdG9wLW9wYWNpdHk9IjAuMTUiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8ZmlsdGVyIGlkPSJnbG93IiB4PSItNDAlIiB5PSItNDAlIiB3aWR0aD0iMTgwJSIgaGVpZ2h0PSIxODAlIj4KICAgICAgPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMi4yIiByZXN1bHQ9ImIiLz4KICAgICAgPGZlTWVyZ2U+PGZlTWVyZ2VOb2RlIGluPSJiIi8+PGZlTWVyZ2VOb2RlIGluPSJTb3VyY2VHcmFwaGljIi8+PC9mZU1lcmdlPgogICAgPC9maWx0ZXI+CiAgPC9kZWZzPgoKICA8cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iNjIiIGhlaWdodD0iNjIiIHJ4PSIxNSIgZmlsbD0idXJsKCNiZykiLz4KICA8cmVjdCB4PSIxLjUiIHk9IjEuNSIgd2lkdGg9IjYxIiBoZWlnaHQ9IjYxIiByeD0iMTQuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZiMjZiIiBzdHJva2Utb3BhY2l0eT0iMC4xNiIvPgoKICA8IS0tIOa3sea4iuaWreeOryAtLT4KICA8cGF0aCBkPSJNMTUgMzVhMTcgMTcgMCAwIDEgMzQgMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ1cmwoI3JpbSkiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNMTMgMzFhMTkgMTkgMCAwIDEgMzggMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmY3ZDQ3IiBzdHJva2Utb3BhY2l0eT0iMC4xNiIgc3Ryb2tlLXdpZHRoPSIzLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICA8IS0tIOWdoOiQveS9meeDrCAtLT4KICA8cGF0aCBkPSJNMzIgMTBjNy4yIDkuMiAxMi40IDEzLjQgMTIuNCAyMS4xQTEyLjQgMTIuNCAwIDAgMSAxOS42IDMxQzE5LjYgMjMuNCAyNC44IDE5LjIgMzIgMTBaIgogICAgICAgIGZpbGw9InVybCgjZW1iZXIpIiBmaWx0ZXI9InVybCgjZ2xvdykiLz4KICA8cGF0aCBkPSJNMzIgMjEuNWMzLjggNSA2LjQgNy4yIDYuNCAxMS4xYTYuNCA2LjQgMCAxIDEtMTIuOCAwYzAtMy45IDIuNi02LjEgNi40LTExLjFaIgogICAgICAgIGZpbGw9IiMwYjBkMTQiIG9wYWNpdHk9IjAuOSIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzQuNCIgcj0iMi4yIiBmaWxsPSIjZmZlNmIwIi8+CgogIDwhLS0g6KOC6ZqZ5LiO5L2Z54GrIC0tPgogIDxwYXRoIGQ9Ik0yMCA0NmM2LjggNSAxNy4yIDUgMjQgMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmY5YTU4IiBzdHJva2Utb3BhY2l0eT0iMC43MiIgc3Ryb2tlLXdpZHRoPSIxLjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0zMiA0MHYxMiIgc3Ryb2tlPSIjZmZkMTY2IiBzdHJva2Utb3BhY2l0eT0iMC40NSIgc3Ryb2tlLXdpZHRoPSIxLjEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjE0LjgiIGN5PSIyNC41IiByPSIxLjI1IiBmaWxsPSIjZmZlNmIwIiBmaWxsLW9wYWNpdHk9IjAuOSIvPgogIDxjaXJjbGUgY3g9IjQ5LjIiIGN5PSIyNi4yIiByPSIxIiBmaWxsPSIjZmZiMjZiIiBmaWxsLW9wYWNpdHk9IjAuOCIvPgogIDxjaXJjbGUgY3g9IjQ1LjUiIGN5PSIxNC41IiByPSIwLjgiIGZpbGw9IiNmZmQxNjYiIGZpbGwtb3BhY2l0eT0iMC41NSIvPgo8L3N2Zz4K', alt: '', 'aria-hidden': 'true' })),
-      h('p', { class: 'eyebrow' }, 'THE ABYSS AWAITS'),
-      h('h2', {}, '深渊在等你'),
+      h('p', { class: 'idle-overline' }, 'EMBERFALL · 余烬行者'),
+      h('h1', { class: 'idle-title' }, '烬渊'),
+      h('p', { class: 'idle-tagline' }, 'THE ABYSS AWAITS'),
       h('p', { class: 'idle-lead' },
-        '余烬行者，向下走吧。开局没有主动技能；在升级三选一中点亮分支、强化数值。技能星图只记录进度，组合图鉴中的目标全部免费可见，满足局内共鸣门槛即可生效。'
+        '向下走。收集技能，养出共鸣，在每层首领倒下前活下来。'
       ),
       h('button', { class: 'btn btn-primary btn-lg', 'data-start-run': '' },
         '开始下潜', h('kbd', {}, 'Enter')
@@ -13647,7 +13825,7 @@ function buildSettings(ctx) {
     ),
     list,
     h('div', { class: 'modal-foot' },
-      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v5.0'),
+      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v6.0'),
       h('button', { class: 'btn btn-ghost', onclick: () => closeModal(ctx) }, '关闭')
     )
   );
