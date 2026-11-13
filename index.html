@@ -5728,6 +5728,89 @@ body.reduce-motion *::after {
   }
 }
 
+/* 层间商店 */
+.shop-modal {
+  width: min(820px, 94vw);
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.shop-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 170px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+  text-align: left;
+}
+
+.shop-item:not(:disabled):hover {
+  border-color: rgba(255, 209, 102, 0.4);
+  transform: translateY(-2px);
+}
+
+.shop-item.sold {
+  opacity: 0.4;
+}
+
+.shop-glyph {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: var(--gold);
+}
+
+.shop-info b {
+  display: block;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.shop-info small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  color: var(--faint);
+}
+
+.shop-info p {
+  margin-top: 6px;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.shop-cost {
+  margin-top: auto;
+  font-family: var(--font-num);
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.shop-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+  .shop-item {
+    min-height: 0;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -5798,9 +5881,9 @@ body.reduce-motion *::after {
                     <span class="depth-value" id="depth-value">1</span>
                     <span class="zone" id="zone-name">灰烬回廊</span>
                   </div>
-                  <div class="depth-progress" title="击杀敌人推进深度">
+                  <div class="depth-progress" title="本层波次进度">
                     <div class="depth-progress-track"><i id="depth-fill"></i></div>
-                    <span id="depth-progress-text">0 / 8</span>
+                    <span id="depth-progress-text">1 / 3</span>
                   </div>
                   <span class="hud-pressure" id="pressure-value">压力 ×1.00</span>
                   <div class="hud-actions">
@@ -5956,7 +6039,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T12:47:12.967Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T16:11:23.273Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6049,6 +6132,21 @@ const BAL = {
     growth: 1.25
   },
   skillDamageMult: 1.18,
+  waves: {
+    base: 3,
+    perLayerEvery: 3,
+    cap: 7,
+    sizeBase: 4,
+    sizeLayer: 1.1,
+    sizeWave: 1.8,
+    sizeCap: 24,
+    eliteFromLayer: 4
+  },
+  shop: {
+    everyLayers: 5,
+    cardCost: { common: 32, rare: 58, epic: 92, cursed: 70 },
+    relicCost: 95
+  },
   level: {
     baseRerolls: 1,
     draftSize: 3
@@ -7669,6 +7767,13 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     died: false,
     depth: 1,
     depthProgress: 0,
+    wave: 1,
+    wavesPerLayer: BAL.waves.base,
+    waveSpawned: false,
+    bossWave: false,
+    shopOffer: null,
+    mapIndex: 0,
+    layersCleared: 0,
     skillCap: skillSlotsAt(1),
     kills: 0,
     gold: 0,
@@ -8016,7 +8121,7 @@ function makeEnemy(run, rng, kind, arch, x, y) {
     speed *= Math.max(0.78, 1 - Math.min(0.22, heavy));
   }
   if (boss) {
-    const index = Math.max(0, Math.floor(depth / e.bossEvery) - 1);
+    const index = Math.max(0, depth - 1);
     const bossDef = bossAtIndex(index);
     name = bossDef.name;
     glyph = bossDef.glyph;
@@ -8069,6 +8174,30 @@ function makeEnemy(run, rng, kind, arch, x, y) {
   };
 }
 
+function wavesForLayer(layer) {
+  const w = BAL.waves;
+  return Math.min(w.cap, w.base + Math.floor((layer - 1) / w.perLayerEvery));
+}
+
+function waveSizeFor(layer, wave) {
+  const w = BAL.waves;
+  return Math.min(w.sizeCap, Math.round(w.sizeBase + layer * w.sizeLayer + wave * w.sizeWave));
+}
+
+function spawnWave(run, events) {
+  run.waveSpawned = true;
+  run.bossWave = false;
+  const count = waveSizeFor(run.depth, run.wave);
+  const eliteChance = Math.min(BAL.enemy.eliteChanceMax, BAL.enemy.eliteChanceBase + run.depth * BAL.enemy.eliteChancePerDepth);
+  for (let i = 0; i < count; i++) {
+    const kind = run.depth >= BAL.waves.eliteFromLayer && run._rng.chance(eliteChance) ? 'elite' : 'normal';
+    spawnEnemy(run, kind);
+  }
+  run.rngState = run._rng.state;
+  pushEvent(events, { type: 'wave', wave: run.wave, waves: run.wavesPerLayer, size: count });
+  pushLog(run, `第 ${run.depth} 层 · 波次 ${run.wave}/${run.wavesPerLayer}`);
+}
+
 function spawnEnemy(run, kind = 'normal', arch = null) {
   const rng = run._rng;
   const chosen = arch || weightedArchetype(rng, run.depth);
@@ -8107,8 +8236,6 @@ function onDepthUp(run, events) {
   }
   pushLog(run, `深入第 ${run.depth} 层 · ${zoneName(run.depth)}`);
   pushEvent(events, { type: 'depth', depth: run.depth, zone: zoneName(run.depth) });
-  if (run.depth % BAL.enemy.bossEvery === 0) spawnBoss(run, events);
-  else if (run.depth % 5 === 0) spawnElitePack(run, events);
 }
 
 // ───────────────────────── 伤害 / 治疗 / 元素 ─────────────────────────
@@ -8329,13 +8456,6 @@ function killEnemy(run, enemy, events) {
     pushLog(run, `击败首领「${enemy.name}」`);
     offerRelics(run, events);
   }
-  run.depthProgress += 1;
-  const needed = BAL.depth.killsPerDepth + Math.floor((run.depth - 1) / 10) * BAL.depth.killsPerDepthPerTen;
-  if (run.depthProgress >= needed) {
-    run.depthProgress = 0;
-    run.depth += 1;
-    onDepthUp(run, events);
-  }
 }
 
 function damagePlayer(run, raw, events, opts = {}) {
@@ -8385,27 +8505,39 @@ function damagePlayer(run, raw, events, opts = {}) {
 
 // ───────────────────────── 生成 / 战斗更新 ─────────────────────────
 
-function updateSpawning(run, dt) {
-  const e = BAL.enemy;
-  if (run.spawnTimer > 0) run.spawnTimer -= dt;
-  if (run.spawnTimer > 0) return;
-  const alive = run.enemies.filter((enemy) => !enemy.dead && !enemy.boss).length;
-  const maxAlive = Math.min(e.maxAliveCap, Math.floor(e.maxAliveBase + run.depth * e.maxAlivePerDepth));
-  if (alive >= maxAlive) {
-    run.spawnTimer = 0.35;
+function updateSpawning(run, dt, events) {
+  if (run.shopOffer) return;
+  if (!run.waveSpawned && !run.bossWave) {
+    spawnWave(run, events);
     return;
   }
-  const batch = run.depth >= e.batchFromDepth ? 1 + Math.floor((run.depth - e.batchFromDepth) / 18) : 1;
-  const eliteChance = Math.min(e.eliteChanceMax, e.eliteChanceBase + run.depth * e.eliteChancePerDepth);
-  for (let i = 0; i < batch; i++) {
-    const kind = run.depth >= 4 && run._rng.chance(eliteChance) ? 'elite' : 'normal';
-    spawnEnemy(run, kind);
+  const alive = run.enemies.filter((enemy) => !enemy.dead);
+  if (run.bossWave) {
+    if (!alive.some((enemy) => enemy.boss)) completeLayer(run, events);
+    return;
   }
-  const interval = Math.max(
-    e.spawnIntervalMin,
-    e.spawnIntervalBase - run.depth * e.spawnDepthFactor - run.elapsed * e.spawnTimeFactor
-  );
-  run.spawnTimer = interval * run._rng.range(0.85, 1.15);
+  if (alive.length > 0) return;
+  if (run.wave < run.wavesPerLayer) {
+    run.wave += 1;
+    run.waveSpawned = false;
+    return;
+  }
+  run.bossWave = true;
+  run.waveSpawned = false;
+  spawnBoss(run, events);
+}
+
+function completeLayer(run, events) {
+  if (!run.active) return;
+  run.depth += 1;
+  run.layersCleared += 1;
+  run.wave = 1;
+  run.wavesPerLayer = wavesForLayer(run.depth);
+  run.waveSpawned = false;
+  run.bossWave = false;
+  run.mapIndex = Math.floor((run.depth - 1) / 3);
+  onDepthUp(run, events);
+  if (run.depth % BAL.shop.everyLayers === 0) openLayerShop(run, events);
 }
 
 function updatePlayerProjectiles(run, dt, events) {
@@ -9441,6 +9573,61 @@ function rerollDraft(run) {
   return { ok: true, free: false, left: 0, cost: BAL.rerollCost };
 }
 
+function openLayerShop(run, events = []) {
+  if (run.shopOffer) return;
+  const rng = run._rng;
+  const cardPool = CARDS.filter((card) => !card.fusion && !(card.effects && card.effects.unlock));
+  const offers = [];
+  const used = new Set();
+  for (let i = 0; i < 2; i++) {
+    const pool = cardPool.filter((card) => !used.has(card.id));
+    if (!pool.length) break;
+    const card = rng.pick(pool);
+    used.add(card.id);
+    offers.push({
+      kind: 'card', id: card.id, name: card.name, glyph: card.glyph,
+      desc: effectLines(card.effects, 1).map((line) => line.text).join(' · '),
+      cost: BAL.shop.cardCost[card.rarity] || 50, sold: false
+    });
+  }
+  const relicPool = RELICS.filter((relic) => !(run.relicIds || []).includes(relic.id));
+  if (relicPool.length) {
+    const relic = rng.pick(relicPool);
+    offers.push({
+      kind: 'relic', id: relic.id, name: relic.name, glyph: relic.glyph,
+      desc: effectLines(relic.effects, 1).map((line) => line.text).join(' · '),
+      cost: BAL.shop.relicCost, sold: false
+    });
+  }
+  run.shopOffer = offers;
+  run.rngState = rng.state;
+  pushEvent(events, { type: 'shop', offers: offers.length });
+}
+
+function buyShopItem(run, index) {
+  const offer = run.shopOffer && run.shopOffer[index];
+  if (!offer) return { ok: false, reason: '商品不存在' };
+  if (offer.sold) return { ok: false, reason: '已售出' };
+  if (run.gold < offer.cost) return { ok: false, reason: '金币不足' };
+  run.gold -= offer.cost;
+  offer.sold = true;
+  if (offer.kind === 'card') {
+    run.cardCounts[offer.id] = (run.cardCounts[offer.id] || 0) + 1;
+    pushLog(run, `商店：获得卡牌「${offer.name}」`);
+  } else {
+    run.relicIds.push(offer.id);
+    pushLog(run, `商店：获得遗物「${offer.name}」`);
+  }
+  recomputeStats(run);
+  return { ok: true, ...offer };
+}
+
+function leaveShop(run) {
+  if (!run.shopOffer) return { ok: false };
+  run.shopOffer = null;
+  return { ok: true };
+}
+
 function offerRelics(run, events) {
   const owned = new Set(run.relicIds);
   const pool = RELICS.filter((relic) => !owned.has(relic.id));
@@ -9522,7 +9709,7 @@ function abyssPressure(run) {
 
 function stepRun(run, dt = STEP) {
   const events = [];
-  if (!run.active || run.paused || run.draft || run.relicOffer) return events;
+  if (!run.active || run.paused || run.draft || run.relicOffer || run.shopOffer) return events;
   const step = Math.min(dt, STEP * 3);
   run.elapsed += step;
   if (run.reactionFxCd > 0) run.reactionFxCd = Math.max(0, run.reactionFxCd - step);
@@ -9548,7 +9735,7 @@ function stepRun(run, dt = STEP) {
     firePlayerAttack(run, events);
   }
 
-  updateSpawning(run, step);
+  updateSpawning(run, step, events);
   updatePlayerProjectiles(run, step, events);
   updateEnemyShots(run, step, events);
   updateEnemies(run, step, events);
@@ -9837,6 +10024,12 @@ function hydrateRun(data) {
   run.autoSkills = run.autoSkills !== false;
   run.elapsed = run.elapsed || 0;
   run.depthProgress = run.depthProgress || 0;
+  run.wave = run.wave || 1;
+  run.wavesPerLayer = run.wavesPerLayer || wavesForLayer(run.depth || 1);
+  run.waveSpawned = !!run.waveSpawned;
+  run.bossWave = !!run.bossWave;
+  run.shopOffer = run.shopOffer || null;
+  run.mapIndex = run.mapIndex || 0;
   run.spawnTimer = run.spawnTimer || 0.8;
   run.attackTimer = run.attackTimer || 0.4;
   try {
@@ -11732,9 +11925,12 @@ function updateRun(ctx) {
   delveEls.xpValue.textContent = `${fmtInt(run.xp)} / ${fmtInt(run.xpNext)}`;
   delveEls.levelValue.textContent = run.level;
 
-  const needed = BAL.depth.killsPerDepth + Math.floor((run.depth - 1) / 10) * BAL.depth.killsPerDepthPerTen;
-  delveEls.depthFill.style.width = `${Math.min(100, (run.depthProgress / needed) * 100)}%`;
-  delveEls.depthText.textContent = `${run.depthProgress} / ${needed}`;
+  const waves = Math.max(1, run.wavesPerLayer || 3);
+  const wave = Math.min(waves, run.wave || 1);
+  const waveProgress = run.bossWave ? 100 : Math.min(100, ((wave - 1) / waves) * 100);
+  delveEls.depthFill.style.width = `${waveProgress}%`;
+  delveEls.depthText.textContent = run.bossWave ? 'BOSS' : `${wave} / ${waves}`;
+  delveEls.depthFill.parentElement?.setAttribute('title', run.bossWave ? '本层首领战' : `本层波次 ${wave} / ${waves}`);
   delveEls.depth.textContent = run.depth;
   if (delveEls.pressure) delveEls.pressure.textContent = `压力 ×${abyssPressure(run).toFixed(2)}`;
   if (delveEls.watermark) delveEls.watermark.textContent = run.depth;
@@ -11925,7 +12121,7 @@ function refreshRunPanels(ctx, full = false) {
   if (delveEls.relicCount) delveEls.relicCount.textContent = `${run.relicIds.length}`;
   clear(delveEls.relicGrid);
   if (!run.relicIds.length) {
-    delveEls.relicGrid.append(h('div', { class: 'relic-empty' }, '击败每 10 层的首领，可夺取一件遗物。'));
+    delveEls.relicGrid.append(h('div', { class: 'relic-empty' }, '击败每层首领，可夺取一件遗物。'));
   } else {
     for (const id of run.relicIds) {
       const relic = RELIC_BY_ID[id];
@@ -11945,8 +12141,8 @@ function refreshRunPanels(ctx, full = false) {
     clear(delveEls.runLog).append(...run.log.map((line) => h('li', {}, line)));
   }
   if (delveEls.runStateTag) {
-    delveEls.runStateTag.textContent = run.paused ? '已暂停' : run.draft ? '选择卡牌' : run.relicOffer ? '选择遗物' : '进行中';
-    delveEls.runStateTag.className = `tag${run.paused || run.draft || run.relicOffer ? ' subtle' : ''}`;
+    delveEls.runStateTag.textContent = run.paused ? '已暂停' : run.draft ? '选择卡牌' : run.relicOffer ? '选择遗物' : run.shopOffer ? '层间商店' : '进行中';
+    delveEls.runStateTag.className = `tag${run.paused || run.draft || run.relicOffer || run.shopOffer ? ' subtle' : ''}`;
   }
 }
 
@@ -11997,11 +12193,13 @@ function handleDelveEvents(ctx, events) {
         play('level');
         break;
       case 'depth':
-        if (event.depth % 5 === 0 && event.depth % BAL.enemy.bossEvery !== 0) {
-          banner(`第 ${event.depth} 层`, event.zone, 'small');
-        }
+        banner(`第 ${event.depth} 层`, event.zone, 'small');
         refreshRunPanels(ctx);
         if (ctx.refreshHeader) ctx.refreshHeader();
+        break;
+      case 'wave':
+        banner(`第 ${event.wave} 波`, `本层共 ${event.waves} 波 · ${event.size} 只`, 'small');
+        refreshRunPanels(ctx);
         break;
       case 'boss':
         banner('首领 · ' + event.name, 'THE ABYSS STIRS', 'boss');
@@ -12135,7 +12333,7 @@ function guideSection() {
     ['普通 / 强共鸣', '全部组合免费可见。普通组合需双方各 3 点共鸣，强共鸣需双方各 4 点；达标后自动生效，图鉴会显示每个组件的进度。'],
     ['技能合成', '冰火陨星、雷狱裂隙、血誓星盾需组件双方各 4 点共鸣且都点亮进阶，合成卡才会进入三选一；合成后保留相关共鸣。'],
     ['元素印记', '火 / 冰 / 雷 / 虚技能命中会留下元素印记。两个不同元素相遇触发蒸发、超载、超导、燃魂、湮灭或雷暴。'],
-    ['深度与首领', '每击杀若干敌人深入一层，每 10 层出现首领，击败后三选一夺取遗物。深度越深，敌人与压力越强。'],
+    ['波次与层数', '每层从第 1 波开始，清完本层所有波次后挑战本层首领；击败首领进入下一层。层数越深，波次越多、敌人越强。'],
     ['魂火与轮回', '死亡或主动撤退都会结算魂火，用于余烬祭坛永久强化；达到门槛可轮回换星屑。组合图鉴不消耗魂火，也不写解锁存档。'],
     ['自动战斗', '开启「自动」后 AI 会走位、放技能、选卡并继续下一局；停滞 100 秒自动撤退。手动模式可用 1–6 或技能详情面板施法。']
   ];
@@ -12276,7 +12474,7 @@ function enemySection() {
 }
 
 function bossSection() {
-  return section('首领名录', '每 10 层出现一位；会追击、发射环形弹幕，半血狂暴',
+  return section('首领名录', '每层出现一位；会追击、发射环形弹幕，半血狂暴',
     h('div', { class: 'codex-grid' },
       BOSSES.map((boss, index) =>
         h('article', { class: 'codex-item' },
@@ -12951,7 +13149,7 @@ function activeModalType() {
   return current ? current.type : null;
 }
 
-const PRIORITY_TYPES = ['draft', 'relic', 'report'];
+const PRIORITY_TYPES = ['draft', 'relic', 'report', 'shop'];
 
 function openModal(ctx, spec) {
   const priority = PRIORITY_TYPES.includes(spec.type);
@@ -13027,6 +13225,7 @@ function render(ctx) {
   let modal = null;
   if (spec.type === 'draft') modal = buildDraft(ctx, spec);
   else if (spec.type === 'relic') modal = buildRelic(ctx, spec);
+  else if (spec.type === 'shop') modal = buildShop(ctx, spec);
   else if (spec.type === 'report') modal = buildReport(ctx, spec);
   else if (spec.type === 'offline') modal = buildOffline(ctx, spec);
   else if (spec.type === 'tutorial') modal = buildTutorial(ctx, spec);
@@ -13168,6 +13367,50 @@ function buildDraft(ctx, spec) {
   );
   mount(modal, foot);
   if (auto) mount(modal, h('div', { class: 'draft-auto', id: 'draft-auto' }, '自动战斗已开启：', h('b', {}, '1.3 秒'), ' 后自动选择'));
+  return modal;
+}
+
+// ───────────────────────── 层间商店 ─────────────────────────
+
+function openShop(ctx) {
+  if (!ctx.run || !ctx.run.shopOffer) return;
+  openModal(ctx, { type: 'shop', dismissable: false });
+}
+
+function buildShop(ctx) {
+  const run = ctx.run;
+  if (!run || !run.shopOffer) return null;
+  const modal = h('div', { class: 'modal shop-modal' });
+  mount(modal,
+    h('div', { class: 'modal-head' },
+      h('p', { class: 'eyebrow' }, 'WAVE SHOP'),
+      h('h2', { class: 'modal-title' }, '层间商店'),
+      h('p', { class: 'modal-sub' }, `金币 ${fmtInt(run.gold)} · 每 5 层出现一次`)
+    )
+  );
+  const grid = h('div', { class: 'shop-grid' });
+  run.shopOffer.forEach((offer, index) => {
+    const affordable = run.gold >= offer.cost && !offer.sold;
+    const button = h('button', {
+      class: `shop-item${offer.sold ? ' sold' : ''}`,
+      disabled: !affordable,
+      onclick: () => ctx.buyShop(index)
+    },
+      h('span', { class: 'shop-glyph' }, offer.glyph),
+      h('span', { class: 'shop-info' },
+        h('b', {}, offer.name),
+        h('small', {}, offer.kind === 'relic' ? '遗物' : '卡牌'),
+        h('p', {}, offer.desc || '')
+      ),
+      h('span', { class: 'shop-cost' }, offer.sold ? '已售出' : `✦ ${fmtInt(offer.cost)}`)
+    );
+    mount(grid, button);
+  });
+  mount(modal, grid);
+  mount(modal, h('div', { class: 'shop-actions' },
+    h('span', { class: 'muted' }, '购买后立即生效'),
+    h('button', { class: 'btn btn-primary', onclick: () => ctx.closeShop() }, '继续下潜')
+  ));
   return modal;
 }
 
@@ -13314,6 +13557,7 @@ function buildTutorial(ctx) {
   const steps = [
     ['走位与第一技能', 'WASD / 方向键（手机拖动战斗区）移动，角色自动锁敌射击。开局没有主动技能，首次升级三选一中选择技能根节点来获得第一个技能。'],
     ['14 技能 · 6 格', '14 个主动技能分为速射、普通与重型。技能槽在深度 1 / 8 / 15 / 24 / 35 / 48 逐步解锁，最多 6 个；点击圆形图标可查看真实冷却和技能详情。'],
+    ['波次与商店', '每层从第 1 波开始，清完本层所有波次后打本层首领。每通过 5 层出现一次层间商店，用金币买卡牌或遗物。'],
     ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
     ['组合无需购买', '普通组合需双方各 3 点共鸣，强共鸣各 4 点；合成需双方各 4 点且都点亮进阶。数值强化与进阶积累共鸣，组合图鉴只用于查看目标与进度。'],
     ['带回魂火', '死亡或主动撤退都会结算魂火。魂火用于余烬祭坛的永久强化；达到深度门槛可轮回换星屑。'],
@@ -13471,6 +13715,8 @@ function createApp() {
     codexReady: false,
     seenDraft: null,
     seenRelic: null,
+    seenShop: null,
+    autoShopAt: 0,
     autoChooseAt: 0,
     autoRelicAt: 0,
     autoNextAt: 0,
@@ -13617,6 +13863,27 @@ function createApp() {
       }
       closeModal(ctx);
       play('relic');
+      refreshRunPanels(ctx);
+      ctx.save();
+    },
+    buyShop(index) {
+      if (!run) return;
+      const result = buyShopItem(run, index);
+      if (!result.ok) {
+        play('error');
+        ctx.toast(result.reason || '无法购买', 'error');
+        return;
+      }
+      play('buy');
+      openShop(ctx);
+      refreshRunPanels(ctx);
+      ctx.save();
+    },
+    closeShop() {
+      if (!run) return;
+      leaveShop(run);
+      closeModal(ctx);
+      play('buy');
       refreshRunPanels(ctx);
       ctx.save();
     },
@@ -13823,12 +14090,12 @@ function createApp() {
       run.autoCast = !!(meta.settings.autoCast || meta.settings.autoDelve);
       run.autoSkills = meta.settings.autoSkills !== false;
       const blockingModal = activeModalType() === 'confirm';
-      if (!run.paused && !run.draft && !run.relicOffer && !blockingModal && !ui.skillTreeOpen) {
+      if (!run.paused && !run.draft && !run.relicOffer && !run.shopOffer && !blockingModal && !ui.skillTreeOpen) {
         run.input = run.autoPilot ? run.input : computeMoveInput();
         const events = [];
         const maxSteps = Math.min(220, Math.ceil(dt / STEP));
         for (let i = 0; i < maxSteps; i++) {
-          if (!run.active || run.draft || run.relicOffer || run.paused) break;
+          if (!run.active || run.draft || run.relicOffer || run.shopOffer || run.paused) break;
           events.push(...stepRun(run, STEP));
         }
         if (events.length) handleDelveEvents(ctx, events);
@@ -13920,9 +14187,27 @@ function createApp() {
         ui.autoRelicAt = 0;
       }
     }
+    if (run && run.shopOffer) {
+      if (ui.seenShop !== run.shopOffer) {
+        ui.seenShop = run.shopOffer;
+        ui.autoShopAt = meta.settings.autoDelve ? now + 1300 : 0;
+        openShop(ctx);
+      } else if (meta.settings.autoDelve) {
+        if (!ui.autoShopAt) ui.autoShopAt = now + 900;
+        if (now >= ui.autoShopAt) {
+          ui.autoShopAt = 0;
+          const index = run.shopOffer.findIndex((offer) => !offer.sold && offer.cost <= run.gold);
+          if (index >= 0) ctx.buyShop(index);
+          else ctx.leaveShop();
+        }
+      } else {
+        ui.autoShopAt = 0;
+      }
+    }
     if (!run) {
       ui.seenDraft = null;
       ui.seenRelic = null;
+      ui.seenShop = null;
     }
   }
 
