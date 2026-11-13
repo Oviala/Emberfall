@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:42:47.943Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:52:33.700Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6291,11 +6291,11 @@ const BAL = {
   // v4 阶段性技能槽：深度 1/5/10/16/22/30，最多 6 个主动技能位。
   skillSlots: [
     { depth: 1, slots: 1 },
-    { depth: 8, slots: 2 },
-    { depth: 15, slots: 3 },
-    { depth: 24, slots: 4 },
-    { depth: 35, slots: 5 },
-    { depth: 48, slots: 6 }
+    { depth: 4, slots: 2 },
+    { depth: 7, slots: 3 },
+    { depth: 10, slots: 4 },
+    { depth: 14, slots: 5 },
+    { depth: 18, slots: 6 }
   ],
   enemy: {
     hpBase: 26,
@@ -6316,12 +6316,12 @@ const BAL = {
     eliteHp: 3.2,
     eliteAtk: 1.25,
     bossEvery: 10,
-    bossHpMult: 7.5,
-    bossAtkMult: 1.6,
+    bossHpMult: 4.5,
+    bossAtkMult: 1.12,
     bossRadius: 40,
     bossSpeed: 62,
-    bossBurstInterval: 4.2,
-    bossBurstCount: 10,
+    bossBurstInterval: 5.0,
+    bossBurstCount: 7,
     xpBase: 3.2,
     xpPerDepth: 0.55,
     goldBase: 1.2,
@@ -6345,8 +6345,8 @@ const BAL = {
     eliteFromLayer: 4
   },
   layers: {
-    bossAtBase: 300,
-    bossAtPerLayer: 40,
+    bossAtBase: 420,
+    bossAtPerLayer: 45,
     shopAt: [0.55, 0.85],
     maxLayer: 10
   },
@@ -7242,8 +7242,76 @@ function buildRunMods(run) {
   return mergeMods(run.metaMods, cardsMods(run.cardCounts), relicsMods(run.relicIds));
 }
 
+// ── js/data/layerSkills.js ──
+// 各难度层专属技能：只在对应层开放，自动施放也必须安全。
+// 不进入基础 14 技能树，避免打乱原有技能星图。
+const LAYER_SKILLS = [
+  {
+    id: 'parasite', name: '寄生卵', glyph: '卵', cd: 5.2, role: 'normal', behavior: 'parasiteEgg',
+    element: 'void', color: '#9ff0c0', type: '层专属 · 寄生', minLayer: 2,
+    desc: (ap) => `向最近敌人植入寄生卵，造成 ${Math.round(85 * ap)}% 伤害；目标 8 秒内死亡会孵化 4 枚追踪魂弹。`,
+    flavor: '死掉的东西，也可以再替你活一次。'
+  },
+  {
+    id: 'totem', name: '诱饵图腾', glyph: '图', cd: 8, role: 'normal', behavior: 'decoyTotem',
+    element: null, physical: true, color: '#d8b48a', type: '层专属 · 控场', minLayer: 2,
+    desc: (ap) => `在脚下立起持续 4 秒的图腾，缓慢牵引附近敌人，结束时爆炸造成 ${Math.round(170 * ap)}% 范围伤害。`,
+    flavor: '它替你站在那里，也替你挨打。'
+  },
+  {
+    id: 'mirror', name: '镜返', glyph: '镜', cd: 6.5, role: 'normal', behavior: 'mirrorStance',
+    element: 'void', color: '#9fd8ff', type: '层专属 · 反制', minLayer: 3,
+    desc: (ap) => `展开 1.5 秒镜面，清空附近敌方子弹并反射为 6 枚星弹，每枚 ${Math.round(70 * ap)}%。`,
+    flavor: '打回来的东西，通常更疼。'
+  },
+  {
+    id: 'echo', name: '回响替身', glyph: '响', cd: 9, role: 'normal', behavior: 'echoClone',
+    element: 'void', color: '#c9a7ff', type: '层专属 · 残影', minLayer: 4,
+    desc: (ap) => `留下一个残影，持续 4 秒自动向敌人射击；残影攻击造成 ${Math.round(45 * ap)}% 伤害。`,
+    flavor: '你走了，但动作还留在原地。'
+  },
+  {
+    id: 'gravity', name: '重力井', glyph: '重', cd: 8, role: 'normal', behavior: 'gravityWell',
+    element: 'void', color: '#9fb6ff', type: '层专属 · 改弹道', minLayer: 5,
+    desc: () => `投出持续 3 秒的重力井，弯曲穿过附近的敌方子弹并减速敌人。`,
+    flavor: '连弹幕也有重量。'
+  },
+  {
+    id: 'stasis', name: '时停', glyph: '滞', cd: 10, role: 'normal', behavior: 'timeStop',
+    element: 'ice', color: '#bfe9ff', type: '层专属 · 时间', minLayer: 5,
+    desc: () => `冻结敌方子弹与弹幕区域 1.5 秒，敌人移速降低 75%；你可以自由走位。`,
+    flavor: '钟停的时候，只有你还在走。'
+  },
+  {
+    id: 'devour', name: '吞噬', glyph: '噬', cd: 9, role: 'heavy', behavior: 'devour',
+    element: null, physical: true, color: '#ff8a7a', type: '层专属 · 处决', minLayer: 7,
+    desc: (ap) => `吞噬附近生命低于 22% 的普通怪，最多 3 只；每只回复 ${Math.round(35 * ap)}% 攻击力的生命。`,
+    flavor: '深渊吃东西，从不吐骨头。'
+  },
+  {
+    id: 'wall', name: '地脉改写', glyph: '脉', cd: 12, role: 'heavy', behavior: 'earthWall',
+    element: null, physical: true, color: '#a0d8a8', type: '层专属 · 地形', minLayer: 7,
+    desc: () => `在场上立起持续 4 秒的地脉屏障，阻挡敌人并推开来不及躲开的弹幕。`,
+    flavor: '战场不是给定的，是可以改的。'
+  },
+  {
+    id: 'shadow', name: '影分身', glyph: '影', cd: 11, role: 'heavy', behavior: 'shadowClone',
+    element: 'void', color: '#b48cff', type: '层专属 · 分身', minLayer: 9,
+    desc: (ap) => `分裂出一个持续 5 秒的影子，自动向敌人射击，造成 ${Math.round(38 * ap)}% 伤害。`,
+    flavor: '影子不需要你同意。'
+  }
+];
+
+const LAYER_SKILL_BY_ID = Object.fromEntries(LAYER_SKILLS.map((skill) => [skill.id, skill]));
+
+function layerSkillsFor(layer) {
+  const current = Math.max(1, Math.floor(Number(layer) || 1));
+  // 高层继承之前所有层专属技能；放入技能栏时新层技能优先。
+  return LAYER_SKILLS.filter((skill) => skill.minLayer <= current).map((skill) => skill.id);
+}
+
 // ── js/data/abilities.js ──
-// v5 主动技能：6 速射、7 普通、2 重型，另有 3 个局内合成。
+// v5 主动技能：6 速射、7 普通、2 重型，另有 3 个局内合成与层专属技能。
 // behavior 是稳定的引擎行为标识；本版重做了全部技能身份、图标、定位与数值。
 
 const ABILITIES = [
@@ -7357,9 +7425,11 @@ const FUSIONS = [
   }
 ];
 
+
+
 const ABILITY_BY_ID = Object.fromEntries(ABILITIES.map((ability) => [ability.id, ability]));
 const FUSION_BY_ID = Object.fromEntries(FUSIONS.map((fusion) => [fusion.id, fusion]));
-const ALL_ABILITIES = [...ABILITIES, ...FUSIONS];
+const ALL_ABILITIES = [...ABILITIES, ...FUSIONS, ...LAYER_SKILLS];
 const ALL_ABILITY_BY_ID = Object.fromEntries(ALL_ABILITIES.map((ability) => [ability.id, ability]));
 
 // ── js/data/synergies.js ──
@@ -7784,15 +7854,15 @@ function bossAtIndex(index) {
 // 难度层定义：一层 = 一局。每层固定地图/Boss，并叠加特殊机制。
 const LAYERS = [
   { name: '灰烬回廊', desc: '基础下潜', enemySpeed: 1, eliteBonus: 0, spawnRate: 1, bossHp: 1 },
-  { name: '低语岔口', desc: '敌群移速 +8%', enemySpeed: 1.08, eliteBonus: 0, spawnRate: 1, bossHp: 1 },
-  { name: '苔蚀阶梯', desc: '精英出现率提高', enemySpeed: 1.03, eliteBonus: 0.04, spawnRate: 1, bossHp: 1 },
-  { name: '碎镜之厅', desc: '刷新更密集', enemySpeed: 1.04, eliteBonus: 0.02, spawnRate: 1.18, bossHp: 1 },
-  { name: '无光深井', desc: '首领生命 +25%', enemySpeed: 1.05, eliteBonus: 0.02, spawnRate: 1, bossHp: 1.25 },
-  { name: '骨桥', desc: '敌群移速 +12%', enemySpeed: 1.12, eliteBonus: 0.03, spawnRate: 1.05, bossHp: 1.1 },
-  { name: '星落平原', desc: '精英更多、首领更硬', enemySpeed: 1.06, eliteBonus: 0.06, spawnRate: 1.08, bossHp: 1.2 },
-  { name: '潮汐墓场', desc: '刷怪速度大幅提高', enemySpeed: 1.05, eliteBonus: 0.03, spawnRate: 1.3, bossHp: 1.1 },
-  { name: '凝滞之庭', desc: '敌群又硬又快', enemySpeed: 1.16, eliteBonus: 0.05, spawnRate: 1.12, bossHp: 1.3 },
-  { name: '深渊心室', desc: '终末难度：全面强化', enemySpeed: 1.2, eliteBonus: 0.08, spawnRate: 1.25, bossHp: 1.45 }
+  { name: '低语岔口', desc: '敌群移速 +4%', enemySpeed: 1.04, eliteBonus: 0, spawnRate: 1, bossHp: 1 },
+  { name: '苔蚀阶梯', desc: '精英出现率提高', enemySpeed: 1.02, eliteBonus: 0.03, spawnRate: 1, bossHp: 1 },
+  { name: '碎镜之厅', desc: '刷新更密集', enemySpeed: 1.03, eliteBonus: 0.01, spawnRate: 1.06, bossHp: 1 },
+  { name: '无光深井', desc: '首领生命 +15%', enemySpeed: 1.04, eliteBonus: 0.01, spawnRate: 1, bossHp: 1.15 },
+  { name: '骨桥', desc: '敌群移速 +6%', enemySpeed: 1.06, eliteBonus: 0.02, spawnRate: 1.02, bossHp: 1.08 },
+  { name: '星落平原', desc: '精英更多、首领更硬', enemySpeed: 1.05, eliteBonus: 0.04, spawnRate: 1.04, bossHp: 1.12 },
+  { name: '潮汐墓场', desc: '刷怪速度提高', enemySpeed: 1.05, eliteBonus: 0.02, spawnRate: 1.14, bossHp: 1.08 },
+  { name: '凝滞之庭', desc: '敌群更硬更快', enemySpeed: 1.08, eliteBonus: 0.03, spawnRate: 1.06, bossHp: 1.15 },
+  { name: '深渊心室', desc: '终末难度：全面强化', enemySpeed: 1.1, eliteBonus: 0.05, spawnRate: 1.1, bossHp: 1.2 }
 ];
 
 function layerInfo(layer) {
@@ -7976,6 +8046,7 @@ function runNodeAvailable(run, node) {
 
 
 
+
 const STEP = 1 / 30;
 const MAX_EVENTS = 160;
 const DEFAULT_ARENA = { w: 1120, h: 680 };
@@ -8007,6 +8078,12 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     shopMilestones: [],
     shopTaken: [],
     shopBought: false,
+    layerSkillIds: layerSkillsFor(layer),
+    layerActiveSkillIds: layerSkillsFor(layer).slice(-2),
+    echoes: [],
+    walls: [],
+    mirrorUntil: 0,
+    timeStop: 0,
     shopRerolls: 0,
     paidRerolls: 0,
     seed: seed >>> 0,
@@ -8084,6 +8161,7 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     log: [],
     lastProgressAt: 0
   };
+  run.skillCap = Math.max(skillSlotsAt(layer), Math.min(2, (run.layerActiveSkillIds || []).length));
   run._rng = new Rng(run.seed);
   run.rngState = run._rng.state;
   recomputeStats(run);
@@ -8111,6 +8189,9 @@ function collectUnlockedAbilities(run) {
   const list = unlocked
     .filter((id) => ABILITY_BY_ID[id] && !fusedComponents.has(id))
     .sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  for (const id of (run.layerActiveSkillIds || []).slice()) {
+    if (ALL_ABILITY_BY_ID[id] && !list.includes(id)) list.unshift(id);
+  }
   for (const fusionId of run.fusions || []) {
     if (FUSION_BY_ID[fusionId] && !list.includes(fusionId)) list.push(fusionId);
   }
@@ -8343,8 +8424,9 @@ function randomSpawnPoint(run, rng) {
 function makeEnemy(run, rng, kind, arch, x, y) {
   const e = BAL.enemy;
   const depth = run.depth;
-  const hpScale = Math.pow(e.hpGrowth, depth - 1);
-  const atkScale = Math.pow(e.atkGrowth, depth - 1);
+  const scaleDepth = Math.max(0, (depth - 1) * 0.2);
+  const hpScale = Math.pow(e.hpGrowth, scaleDepth);
+  const atkScale = Math.pow(e.atkGrowth, scaleDepth);
   let name = arch.name;
   let glyph = arch.glyph;
   let tint = arch.tint;
@@ -8475,6 +8557,11 @@ function spawnEnemy(run, kind = 'normal', arch = null) {
 
 function spawnBoss(run, events) {
   if (run.enemies.some((enemy) => enemy.boss && !enemy.dead)) return;
+  // Boss 登场清场，避免小怪和 Boss 叠加把玩家直接压死。
+  run.enemies = run.enemies.filter((enemy) => enemy.dead);
+  run.player.invuln = Math.max(run.player.invuln, 1.2);
+  healPlayer(run, run.maxHp * 0.65, events, true);
+  run.shield = Math.max(run.shield, run.maxHp * 0.25);
   const boss = spawnEnemy(run, 'boss');
   pushLog(run, `首领「${boss.name}」出现`);
   pushEvent(events, { type: 'boss', name: boss.name, x: boss.x, y: boss.y });
@@ -8718,6 +8805,15 @@ function killEnemy(run, enemy, events) {
   });
   if (run.mods.flags.killHeal) healPlayer(run, run.maxHp * 0.015, events, true);
   if (!enemy.boss) run.depthProgress += 1;
+  if (!enemy.boss && enemy.parasiteUntil && enemy.parasiteUntil > run.elapsed) {
+    for (let i = 0; i < 4; i++) {
+      const angle = (Math.PI * 2 * i) / 4;
+      spawnAbilityBullet(run, {
+        x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 380, vy: Math.sin(angle) * 380,
+        dmg: run.stats.atk * 0.9, radius: 5, life: 1.3, color: '#9ff0c0', kind: 'soul', homing: 6
+      });
+    }
+  }
   if (enemy.boss) {
     pushLog(run, `击败首领「${enemy.name}」`);
     run.victory = true;
@@ -8802,7 +8898,7 @@ function updateSpawning(run, dt, events) {
   if (run.spawnTimer > 0) run.spawnTimer -= dt;
   if (run.spawnTimer > 0) return;
   const alive = run.enemies.filter((enemy) => !enemy.dead && !enemy.boss).length;
-  const maxAlive = Math.min(e.maxAliveCap, Math.floor(e.maxAliveBase + run.layer * e.maxAlivePerDepth));
+  const maxAlive = Math.min(24, Math.floor(e.maxAliveBase + (run.layer - 1) * 0.6));
   if (alive >= maxAlive) {
     run.spawnTimer = 0.3;
     return;
@@ -8898,10 +8994,30 @@ function updatePlayerProjectiles(run, dt, events) {
 }
 
 function updateEnemyShots(run, dt, events) {
+  const frozen = (run.timeStop || 0) > 0;
+  const gravityZones = (run.zones || []).filter((zone) => zone.bend && zone.remaining > 0);
   for (const shot of run.enemyShots) {
+    if (frozen) continue;
+    if (gravityZones.length) {
+      for (const zone of gravityZones) {
+        const d = distance(shot.x, shot.y, zone.x, zone.y);
+        if (d > zone.radius * 1.3 || d < 1) continue;
+        const speed = Math.hypot(shot.vx, shot.vy) || 1;
+        const pull = 240 * dt;
+        shot.vx += ((zone.x - shot.x) / d) * pull;
+        shot.vy += ((zone.y - shot.y) / d) * pull;
+        const ns = Math.hypot(shot.vx, shot.vy) || 1;
+        shot.vx = (shot.vx / ns) * speed;
+        shot.vy = (shot.vy / ns) * speed;
+      }
+    }
     shot.x += shot.vx * dt;
     shot.y += shot.vy * dt;
     shot.life -= dt;
+    if (shot.life <= 0) continue;
+    for (const wall of run.walls || []) {
+      if (distance(shot.x, shot.y, wall.x, wall.y) <= wall.radius) shot.life = 0;
+    }
     if (shot.life <= 0) continue;
     if (distance(shot.x, shot.y, run.player.x, run.player.y) <= run.player.radius + shot.radius) {
       damagePlayer(run, shot.dmg, events, { source: 'projectile' });
@@ -8909,6 +9025,47 @@ function updateEnemyShots(run, dt, events) {
     }
   }
   run.enemyShots = run.enemyShots.filter((shot) => shot.life > 0);
+}
+
+function updateEchoes(run, dt, events) {
+  if (!run.echoes || !run.echoes.length) return;
+  for (const echo of run.echoes) {
+    echo.life -= dt;
+    echo.timer -= dt;
+    if (echo.timer > 0) continue;
+    echo.timer = 0.42;
+    let best = null;
+    let bestDist = 520;
+    for (const enemy of run.enemies) {
+      if (enemy.dead) continue;
+      const d = distance(enemy.x, enemy.y, echo.x, echo.y);
+      if (d < bestDist) { bestDist = d; best = enemy; }
+    }
+    if (!best) continue;
+    const angle = Math.atan2(best.y - echo.y, best.x - echo.x);
+    spawnAbilityBullet(run, {
+      x: echo.x, y: echo.y, vx: Math.cos(angle) * 480, vy: Math.sin(angle) * 480,
+      dmg: echo.dmg, radius: 5, life: 1.4, color: echo.color, kind: echo.kind, pierce: 0
+    });
+  }
+  run.echoes = run.echoes.filter((echo) => echo.life > 0);
+}
+
+function updateWalls(run, dt, events) {
+  if (!run.walls || !run.walls.length) return;
+  for (const wall of run.walls) {
+    wall.life -= dt;
+    for (const enemy of run.enemies) {
+      if (enemy.dead || enemy.boss) continue;
+      const d = distance(enemy.x, enemy.y, wall.x, wall.y);
+      if (d < wall.radius && d > 1) {
+        const push = (wall.radius - d) * Math.min(1, dt * 8);
+        enemy.x += ((enemy.x - wall.x) / d) * push;
+        enemy.y += ((enemy.y - wall.y) / d) * push;
+      }
+    }
+  }
+  run.walls = run.walls.filter((wall) => wall.life > 0);
 }
 
 function movePlayer(run, dt) {
@@ -9195,7 +9352,7 @@ function updateEnemies(run, dt, events) {
       moveX = 0;
       moveY = 0;
     }
-    const speed = enemy.speed * slowFactor * (enemy.enraged ? 1.15 : 1);
+    const speed = enemy.speed * slowFactor * (enemy.enraged ? 1.15 : 1) * ((run.timeStop || 0) > 0 ? 0.25 : 1);
     enemy.vx = moveX * speed;
     enemy.vy = moveY * speed;
     enemy.x = clamp(enemy.x + enemy.vx * dt, enemy.radius, run.arena.w - enemy.radius);
@@ -9636,6 +9793,52 @@ function castAbility(run, id) {
       dmg: attack * 0.2, radius: 5, life: 2, color: '#ff6b6b', kind: 'blood', lifesteal: 0.06
     });
     pushEvent(events, { type: 'banner', title: '血誓星盾', sub: 'FUSION', tone: 'small' });
+  } else if (behavior === 'parasiteEgg') {
+    if (target) {
+      hitEnemy(run, target, attack * 0.85, events, { element: 'void', applyChance: 1 });
+      target.parasiteUntil = run.elapsed + 8;
+      pushEvent(events, { type: 'ring', x: target.x, y: target.y, radius: 34, color: def.color });
+    }
+  } else if (behavior === 'decoyTotem') {
+    spawnZone(run, {
+      kind: 'decoy', x: player.x, y: player.y, radius: 130, duration: 4,
+      tickInterval: 0.7, dmg: attack * 0.28, element: null, color: def.color, pull: 30
+    });
+    pushEvent(events, { type: 'banner', title: '诱饵图腾', sub: 'TAUNT', tone: 'small' });
+  } else if (behavior === 'mirrorStance') {
+    run.mirrorUntil = run.elapsed + 1.5;
+    run.enemyShots = run.enemyShots.filter((shot) => distance(shot.x, shot.y, player.x, player.y) > 280);
+    fireFan(run, 6 + extra, 1.4, 520, {
+      dmg: attack * 0.7, radius: 6, life: 1.6, element: 'void', color: def.color, kind: 'shard', pierce: 1
+    });
+  } else if (behavior === 'echoClone') {
+    run.echoes.push({ x: player.x, y: player.y, life: 4, timer: 0, dmg: attack * 0.45, color: def.color, kind: 'echo' });
+  } else if (behavior === 'gravityWell') {
+    spawnZone(run, {
+      kind: 'gravity', x: tx, y: ty, radius: 150, duration: 3,
+      tickInterval: 0.6, dmg: 0, element: 'void', color: def.color, pull: 20, bend: true
+    });
+    pushEvent(events, { type: 'ring', x: tx, y: ty, radius: 150, color: def.color });
+  } else if (behavior === 'timeStop') {
+    run.timeStop = Math.max(run.timeStop || 0, 1.5);
+    pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 360, color: def.color });
+  } else if (behavior === 'devour') {
+    let eaten = 0;
+    for (const enemy of run.enemies) {
+      if (eaten >= 3) break;
+      if (enemy.dead || enemy.boss) continue;
+      if (enemy.hp / enemy.maxHp > 0.22) continue;
+      if (distance(enemy.x, enemy.y, player.x, player.y) > 230) continue;
+      killEnemy(run, enemy, events);
+      healPlayer(run, run.maxHp * 0.035, events, true);
+      eaten++;
+    }
+    if (eaten) pushEvent(events, { type: 'banner', title: `吞噬 ×${eaten}`, sub: 'DEVOUR', tone: 'small' });
+  } else if (behavior === 'earthWall') {
+    run.walls.push({ x: player.x, y: player.y, radius: 92, life: 4, color: def.color });
+    pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 92, color: def.color });
+  } else if (behavior === 'shadowClone') {
+    run.echoes.push({ x: player.x, y: player.y, life: 5, timer: 0, dmg: attack * 0.38, color: def.color, kind: 'shadow' });
   } else {
     return { ok: false, reason: '未知行为' };
   }
@@ -10025,6 +10228,9 @@ function stepRun(run, dt = STEP) {
   }
 
   updateSpawning(run, step, events);
+  updateEchoes(run, step, events);
+  updateWalls(run, step, events);
+  if (run.timeStop > 0) run.timeStop = Math.max(0, run.timeStop - step);
   updatePlayerProjectiles(run, step, events);
   updateEnemyShots(run, step, events);
   updateEnemies(run, step, events);
@@ -10203,6 +10409,7 @@ function autoPickRelic(run) {
 
 
 
+
 const SAVE_KEY = 'emberfall.save.v1';
 
 function createStorage(target) {
@@ -10319,7 +10526,12 @@ function hydrateRun(data) {
   run.depthProgress = run.depthProgress || 0;
   run.wave = run.wave || 1;
   run.wavesPerLayer = run.wavesPerLayer || wavesForLayer(run.depth || 1);
-  run.killsNeeded = run.killsNeeded || 10 + (run.depth || 1) * 2;
+  run.layerSkillIds = run.layerSkillIds || layerSkillsFor(run.layer || run.depth || 1);
+  run.layerActiveSkillIds = run.layerActiveSkillIds || run.layerSkillIds.slice(-2);
+  run.echoes = run.echoes || [];
+  run.walls = run.walls || [];
+  run.mirrorUntil = run.mirrorUntil || 0;
+  run.timeStop = run.timeStop || 0;
   run.waveSpawned = !!run.waveSpawned;
   run.bossWave = !!run.bossWave;
   run.shopOffer = run.shopOffer || null;
@@ -10922,7 +11134,16 @@ const ICONS = {
   },
   fuse_bloodstar: {
     paths: ['M20 4 A11 11 0 1 0 26 20 A8 8 0 0 1 20 4 Z', 'M16 6 L18 12 L24 14 L18 16 L16 22 L14 16 L8 14 L14 12 Z']
-  }
+  },
+  parasite: { paths: ['M16 7 C22 7 26 12 25 18 C24 24 18 27 13 24 C8 21 7 14 11 10 C13 8 15 7 16 7 Z', 'M16 13 C19 13 21 15 20 18 C19 21 16 22 14 20 C12 18 13 15 16 13 Z', 'M9 8 L6 4', 'M23 8 L26 4'] },
+  totem: { paths: ['M16 4 V28', 'M8 10 H24', 'M10 10 L7 20 H13 L10 10', 'M22 10 L19 20 H25 L22 10', 'M12 24 H20'] },
+  mirror: { paths: ['M16 4 L27 9 V19 C27 24 22 27 16 29 C10 27 5 24 5 19 V9 Z', 'M11 10 L21 22', 'M21 10 L11 22'] },
+  echo: { paths: ['M10 8 H22 V22 H10 Z', 'M14 12 H18 V18 H14 Z', 'M4 16 H10', 'M22 16 H28', 'M7 5 L4 8', 'M25 27 L28 24'] },
+  gravity: { paths: ['M16 5 C23 5 28 10 28 16 C28 22 23 27 16 27 C9 27 4 22 4 16 C4 10 9 5 16 5 Z', 'M16 11 C19 11 21 13 21 16 C21 19 19 21 16 21 C13 21 11 19 11 16 C11 13 13 11 16 11 Z'], circles: [[16, 16, 2]] },
+  stasis: { paths: ['M16 4 V28', 'M5 16 H27', 'M9 9 L23 23', 'M23 9 L9 23'], circles: [[16, 16, 4]] },
+  devour: { paths: ['M5 16 C5 9 10 5 16 5 C22 5 27 9 27 16 C27 23 22 27 16 27 C10 27 5 23 5 16 Z', 'M9 18 C12 22 20 22 23 18', 'M10 12 L13 15', 'M22 12 L19 15'] },
+  wall: { paths: ['M4 22 H28', 'M6 22 V12 H12 V22', 'M12 12 V8 H20 V12', 'M20 12 H26 V22', 'M9 17 H15', 'M19 17 H25'] },
+  shadow: { paths: ['M10 8 C13 4 20 4 23 9 C26 14 24 22 18 25 C12 28 5 22 6 15 C6 12 8 10 10 8 Z', 'M12 14 L16 18 L20 13', 'M11 23 L8 27', 'M22 23 L25 27'] },
 };
 
 const FALLBACK = {
@@ -14323,6 +14544,8 @@ function renderArena(ctxApp, run, dt) {
 
   drawOrbs(c, run);
   drawZones(c, run);
+  drawWalls(c, run);
+  drawEchoes(c, run);
   drawEnemies(c, run);
   // Boss 美术模块可能改动变换/透明度；画完后强制恢复世界坐标，避免玩家被画到地图外。
   c.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
@@ -14403,6 +14626,54 @@ function drawZones(c, run) {
       c.lineTo(zone.x + Math.cos(a + 0.25) * r * 1.35, zone.y + Math.sin(a + 0.25) * r * 1.35);
       c.stroke();
     }
+    c.restore();
+  }
+}
+
+function drawWalls(c, run) {
+  if (!run.walls || !run.walls.length) return;
+  for (const wall of run.walls) {
+    const a = Math.min(1, wall.life / 2);
+    c.save();
+    c.globalAlpha = 0.35 + a * 0.3;
+    c.strokeStyle = wall.color || '#a0d8a8';
+    c.fillStyle = 'rgba(32, 46, 36, 0.38)';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.arc(wall.x, wall.y, wall.radius, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.globalAlpha = 0.18;
+    c.strokeStyle = '#d8ffe0';
+    c.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI * 2 * i) / 6 + world.time * 0.3;
+      c.beginPath();
+      c.moveTo(wall.x + Math.cos(angle) * wall.radius * 0.45, wall.y + Math.sin(angle) * wall.radius * 0.45);
+      c.lineTo(wall.x + Math.cos(angle) * wall.radius, wall.y + Math.sin(angle) * wall.radius);
+      c.stroke();
+    }
+    c.restore();
+  }
+}
+
+function drawEchoes(c, run) {
+  if (!run.echoes || !run.echoes.length) return;
+  for (const echo of run.echoes) {
+    c.save();
+    c.globalAlpha = Math.min(0.55, echo.life / 4);
+    c.fillStyle = echo.color || '#c9a7ff';
+    c.shadowColor = echo.color || '#c9a7ff';
+    c.shadowBlur = 18;
+    c.beginPath();
+    c.arc(echo.x, echo.y, 15, 0, Math.PI * 2);
+    c.fill();
+    c.globalAlpha *= 0.5;
+    c.beginPath();
+    c.arc(echo.x, echo.y, 26, 0, Math.PI * 2);
+    c.strokeStyle = echo.color || '#c9a7ff';
+    c.lineWidth = 1.4;
+    c.stroke();
     c.restore();
   }
 }
@@ -16947,7 +17218,7 @@ function buildSettings(ctx) {
     ),
     list,
     h('div', { class: 'modal-foot' },
-      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v6.1'),
+      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v7.0'),
       h('button', { class: 'btn btn-ghost', onclick: () => closeModal(ctx) }, '关闭')
     )
   );
