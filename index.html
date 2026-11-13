@@ -6216,7 +6216,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:15:06.492Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:19:24.107Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -14290,16 +14290,16 @@ function drawEnemies(c, run) {
     // 本体：前 6 个 Boss 使用程序化美术，其余保留符号敌人
     if (isBoss && enemy.bossIndex >= 0 && enemy.bossIndex < 12) {
       c.save();
-      c.globalAlpha = 0.18;
-      c.fillStyle = enemy.tint;
-      c.shadowColor = enemy.tint;
-      c.shadowBlur = 36;
+      const aura = c.createRadialGradient(enemy.x, enemy.y, r * 0.4, enemy.x, enemy.y, r * 2.2);
+      aura.addColorStop(0, 'rgba(255, 150, 90, 0.16)');
+      aura.addColorStop(0.55, 'rgba(255, 110, 60, 0.07)');
+      aura.addColorStop(1, 'rgba(255, 90, 50, 0)');
+      c.fillStyle = aura;
       c.beginPath();
       c.arc(enemy.x, enemy.y, r * 2.2, 0, Math.PI * 2);
       c.fill();
       c.restore();
       c.save();
-      c.filter = 'brightness(1.65) contrast(1.08) saturate(1.15)';
       if (enemy.bossIndex < 6) {
         drawBossA(c, enemy.bossIndex, enemy.x, enemy.y, r, world.time, {
           hpRatio: Math.max(0, enemy.hp / enemy.maxHp),
