@@ -6216,7 +6216,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T16:13:28.550Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:15:06.492Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -8318,6 +8318,7 @@ function makeEnemy(run, rng, kind, arch, x, y) {
     tint,
     kind,
     boss,
+    bossIndex: boss ? Math.max(0, depth - 1) : -1,
     elite,
     x,
     y,
@@ -10844,9 +10845,2939 @@ function runeIcon(className = 'ability-icon') {
   return svg;
 }
 
+// ── js/ui/maps-art.js ──
+// 「烬渊」地图背景：静态景致离屏缓存，每帧只合成雾、灰烬与微尘。
+// 所有尺寸均使用 CSS 像素；调用方需先设置好画布的屏幕坐标变换。
+
+const MAP_THEMES = ['灰烬回廊', '低语岔口', '苔蚀阶梯', '碎镜之厅', '无光深井', '骨桥'];
+
+const TAU = Math.PI * 2;
+const cacheByTheme = new Array(MAP_THEMES.length);
+const spriteByTheme = new Array(MAP_THEMES.length);
+const fogColors = [
+  '126,105,91',
+  '130,108,145',
+  '111,137,119',
+  '111,139,151',
+  '116,123,119',
+  '143,119,111'
+];
+
+// 可复现的随机数让同一地图在重绘、切换后仍保持原有裂痕与石纹。
+function seededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function mod(value, divisor) {
+  return ((value % divisor) + divisor) % divisor;
+}
+
+// 优先使用离屏画布；旧浏览器退化为未挂入文档的普通画布。
+function createSurface(width, height, opaque = false) {
+  let canvas = null;
+  if (typeof OffscreenCanvas !== 'undefined') {
+    try {
+      canvas = new OffscreenCanvas(width, height);
+    } catch {
+      canvas = null;
+    }
+  }
+  if (!canvas && typeof document !== 'undefined') {
+    canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+  }
+  if (!canvas) return null;
+  const ctx = canvas.getContext('2d', { alpha: !opaque });
+  return ctx ? { canvas, ctx } : null;
+}
+
+function fillBackground(c, w, h, stops) {
+  const gradient = c.createLinearGradient(0, 0, 0, h);
+  for (const stop of stops) gradient.addColorStop(stop[0], stop[1]);
+  c.fillStyle = gradient;
+  c.fillRect(0, 0, w, h);
+}
+
+function addGlow(c, x, y, radius, inner, outer = 'rgba(0,0,0,0)') {
+  if (radius <= 0) return;
+  const gradient = c.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, inner);
+  gradient.addColorStop(1, outer);
+  c.fillStyle = gradient;
+  c.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+function addVignette(c, w, h, strength = 0.62) {
+  const gradient = c.createRadialGradient(
+    w * 0.5, h * 0.46, Math.min(w, h) * 0.12,
+    w * 0.5, h * 0.5, Math.max(w, h) * 0.72
+  );
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(0.58, 'rgba(0,0,0,0.06)');
+  gradient.addColorStop(1, `rgba(0,0,0,${strength})`);
+  c.fillStyle = gradient;
+  c.fillRect(0, 0, w, h);
+}
+
+function polygon(c, points, fill, stroke, lineWidth = 1) {
+  c.beginPath();
+  c.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
+  c.closePath();
+  if (fill) {
+    c.fillStyle = fill;
+    c.fill();
+  }
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = lineWidth;
+    c.stroke();
+  }
+}
+
+function archPath(c, x, top, width, height) {
+  const spring = top + width * 0.48;
+  c.beginPath();
+  c.moveTo(x, top + height);
+  c.lineTo(x, spring);
+  c.bezierCurveTo(x, top + width * 0.17, x + width * 0.16, top, x + width * 0.5, top);
+  c.bezierCurveTo(x + width * 0.84, top, x + width, top + width * 0.17, x + width, spring);
+  c.lineTo(x + width, top + height);
+}
+
+function addStoneGrain(c, w, h, random, color, count = 220) {
+  c.fillStyle = color;
+  for (let i = 0; i < count; i++) {
+    const x = random() * w;
+    const y = random() * h;
+    const length = 0.5 + random() * 2.8;
+    c.fillRect(x, y, length, 0.5 + random() * 0.8);
+  }
+}
+
+// 0：灰烬回廊——远处连续拱洞、层层门拱与向灭点收拢的焦石地面。
+function paintAshCorridor(c, w, h) {
+  const random = seededRandom(7103 + w * 7 + h * 13);
+  fillBackground(c, w, h, [[0, '#17100e'], [0.56, '#100c0b'], [1, '#080707']]);
+  addGlow(c, w * 0.5, h * 0.43, Math.max(w, h) * 0.58, 'rgba(139,65,35,0.19)');
+  addGlow(c, w * 0.12, h * 0.48, Math.min(w, h) * 0.28, 'rgba(181,79,39,0.12)');
+  addGlow(c, w * 0.88, h * 0.48, Math.min(w, h) * 0.28, 'rgba(181,79,39,0.12)');
+
+  // 后墙拱廊横跨整个画面，而不是只装饰中央。
+  const count = Math.max(6, Math.ceil(w / 145));
+  const archWidth = w / count;
+  for (let i = 0; i < count; i++) {
+    const x = i * archWidth - archWidth * 0.08;
+    const top = h * (0.17 + Math.abs(i - count * 0.5) * 0.009);
+    archPath(c, x, top, archWidth * 1.04, h * 0.47);
+    c.fillStyle = i % 2 ? '#0b0909' : '#0d0a09';
+    c.fill();
+    c.strokeStyle = 'rgba(132,91,68,0.20)';
+    c.lineWidth = 1.2;
+    c.stroke();
+    c.fillStyle = 'rgba(77,53,42,0.22)';
+    c.fillRect(x - 3, top + archWidth * 0.45, 5, h * 0.46);
+  }
+
+  // 由远及近的拱框形成纵深，外框自然伸出屏幕边缘。
+  for (let i = 5; i >= 0; i--) {
+    const p = i / 5;
+    const width = w * (0.19 + p * 1.02);
+    const height = h * (0.29 + p * 0.82);
+    const top = h * (0.28 - p * 0.20);
+    archPath(c, (w - width) * 0.5, top, width, height);
+    c.strokeStyle = `rgba(113,77,58,${0.10 + p * 0.14})`;
+    c.lineWidth = 1 + p * 4;
+    c.stroke();
+  }
+
+  const horizon = h * 0.59;
+  const floor = c.createLinearGradient(0, horizon, 0, h);
+  floor.addColorStop(0, '#17100d');
+  floor.addColorStop(1, '#0b0908');
+  c.fillStyle = floor;
+  c.fillRect(0, horizon, w, h - horizon);
+  c.strokeStyle = 'rgba(132,91,64,0.13)';
+  c.lineWidth = 1;
+  c.beginPath();
+  for (let i = -7; i <= 7; i++) {
+    c.moveTo(w * 0.5, horizon);
+    c.lineTo(w * 0.5 + i * w * 0.13, h);
+  }
+  for (let i = 1; i < 8; i++) {
+    const y = horizon + (h - horizon) * Math.pow(i / 8, 1.55);
+    c.moveTo(0, y);
+    c.lineTo(w, y);
+  }
+  c.stroke();
+
+  // 余烬只沿少数焦裂渗出，避免高亮霓虹感。
+  for (let i = 0; i < 9; i++) {
+    const x = random() * w;
+    const y = horizon + random() * (h - horizon);
+    c.strokeStyle = `rgba(196,91,45,${0.10 + random() * 0.13})`;
+    c.lineWidth = 0.7 + random();
+    c.beginPath();
+    c.moveTo(x - 12, y);
+    c.lineTo(x, y + 3);
+    c.lineTo(x + 7 + random() * 20, y - 1);
+    c.stroke();
+  }
+  addStoneGrain(c, w, h, random, 'rgba(170,132,103,0.09)', 300);
+  addVignette(c, w, h, 0.66);
+}
+
+// 1：低语岔口——紫黑岩窟中的三路分叉、残缺门洞与低伏雾带。
+function paintWhisperFork(c, w, h) {
+  const random = seededRandom(12011 + w * 5 + h * 17);
+  fillBackground(c, w, h, [[0, '#110d17'], [0.55, '#0c0911'], [1, '#07070a']]);
+  addGlow(c, w * 0.5, h * 0.46, Math.max(w, h) * 0.52, 'rgba(92,60,105,0.16)');
+
+  polygon(c, [[0, 0], [w * 0.19, 0], [w * 0.27, h * 0.28], [w * 0.16, h * 0.72], [0, h]], '#09070d');
+  polygon(c, [[w, 0], [w * 0.82, 0], [w * 0.74, h * 0.31], [w * 0.85, h * 0.74], [w, h]], '#09070d');
+
+  // 先画三条支路，再画近景主路，交汇处保持连续。
+  const road = c.createLinearGradient(0, h * 0.18, 0, h);
+  road.addColorStop(0, '#18121e');
+  road.addColorStop(1, '#100d14');
+  const roadEdge = 'rgba(119,91,131,0.27)';
+  polygon(c, [
+    [w * 0.46, h * 0.64], [w * 0.42, h * 0.56], [-w * 0.06, h * 0.31],
+    [-w * 0.06, h * 0.48], [w * 0.49, h * 0.62]
+  ], road, roadEdge, 1.4);
+  polygon(c, [
+    [w * 0.54, h * 0.64], [w * 0.58, h * 0.56], [w * 1.06, h * 0.31],
+    [w * 1.06, h * 0.48], [w * 0.51, h * 0.62]
+  ], road, roadEdge, 1.4);
+  polygon(c, [
+    [w * 0.45, h * 0.63], [w * 0.45, h * 0.40], [w * 0.39, h * 0.12],
+    [w * 0.61, h * 0.12], [w * 0.55, h * 0.40], [w * 0.55, h * 0.63]
+  ], road, roadEdge, 1.4);
+  polygon(c, [
+    [w * 0.34, h], [w * 0.445, h * 0.59], [w * 0.555, h * 0.59], [w * 0.66, h]
+  ], road, roadEdge, 1.6);
+
+  // 支路尽头各有一座破损暗门，轮廓在雾中若隐若现。
+  archPath(c, w * 0.435, h * 0.16, w * 0.13, h * 0.29);
+  c.fillStyle = '#06060a';
+  c.fill();
+  c.strokeStyle = 'rgba(128,96,139,0.22)';
+  c.stroke();
+  for (const side of [-1, 1]) {
+    const x = w * (0.5 + side * 0.37);
+    polygon(c, [
+      [x - w * 0.055, h * 0.40], [x - w * 0.035, h * 0.31],
+      [x + w * 0.035, h * 0.31], [x + w * 0.055, h * 0.40]
+    ], '#07070b', 'rgba(113,85,126,0.19)');
+  }
+
+  c.strokeStyle = 'rgba(137,110,150,0.09)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 12; i++) {
+    const y = h * (0.27 + random() * 0.60);
+    const x = random() * w;
+    c.beginPath();
+    c.moveTo(x - w * 0.12, y);
+    c.bezierCurveTo(x - w * 0.03, y - 15, x + w * 0.04, y + 18, x + w * 0.15, y - 3);
+    c.stroke();
+  }
+  addStoneGrain(c, w, h, random, 'rgba(174,145,183,0.07)', 230);
+  addGlow(c, w * 0.5, h * 0.65, Math.min(w, h) * 0.18, 'rgba(167,83,48,0.055)');
+  addVignette(c, w, h, 0.68);
+}
+
+// 2：苔蚀阶梯——透视石阶、两侧湿岩、苔藓斑块和细微水痕。
+function paintMossSteps(c, w, h) {
+  const random = seededRandom(23027 + w * 11 + h * 3);
+  fillBackground(c, w, h, [[0, '#0c130f'], [0.55, '#0b100d'], [1, '#070b09']]);
+  addGlow(c, w * 0.50, h * 0.32, Math.max(w, h) * 0.47, 'rgba(66,93,68,0.15)');
+
+  polygon(c, [[0, 0], [w * 0.29, 0], [w * 0.36, h * 0.31], [w * 0.12, h], [0, h]], '#080d0a');
+  polygon(c, [[w, 0], [w * 0.72, 0], [w * 0.64, h * 0.31], [w * 0.90, h], [w, h]], '#080d0a');
+  archPath(c, w * 0.41, h * 0.10, w * 0.18, h * 0.30);
+  c.fillStyle = '#060a08';
+  c.fill();
+  c.strokeStyle = 'rgba(95,119,91,0.16)';
+  c.stroke();
+
+  const horizon = h * 0.29;
+  const bottom = h * 1.06;
+  const steps = 14;
+  for (let i = 0; i < steps; i++) {
+    const t1 = i / steps;
+    const t2 = (i + 1) / steps;
+    const y1 = horizon + (bottom - horizon) * Math.pow(t1, 1.52);
+    const y2 = horizon + (bottom - horizon) * Math.pow(t2, 1.52);
+    const left1 = w * (0.36 - t1 * 0.48);
+    const right1 = w * (0.64 + t1 * 0.48);
+    const left2 = w * (0.36 - t2 * 0.48);
+    const right2 = w * (0.64 + t2 * 0.48);
+    polygon(c, [[left1, y1], [right1, y1], [right2, y2], [left2, y2]],
+      i % 2 ? '#131b15' : '#151d17', 'rgba(100,119,98,0.16)');
+    c.strokeStyle = 'rgba(137,151,126,0.14)';
+    c.lineWidth = 0.7 + t2 * 1.5;
+    c.beginPath();
+    c.moveTo(left2, y2);
+    c.lineTo(right2, y2);
+    c.stroke();
+  }
+
+  // 苔藓沿阶沿不规则生长，颜色压暗以保留深渊的低饱和质感。
+  for (let i = 0; i < 74; i++) {
+    const t = random();
+    const y = horizon + (bottom - horizon) * Math.pow(t, 1.52);
+    const side = random() < 0.5 ? -1 : 1;
+    const edge = w * (0.5 + side * (0.14 + t * 0.48));
+    const x = edge - side * random() * w * (0.035 + t * 0.12);
+    c.fillStyle = `rgba(65,86,51,${0.10 + random() * 0.18})`;
+    c.beginPath();
+    c.ellipse(x, y, 5 + random() * (12 + t * 35), 1.5 + random() * 5, random() * 0.3, 0, TAU);
+    c.fill();
+  }
+  c.strokeStyle = 'rgba(146,166,149,0.11)';
+  c.lineWidth = 0.8;
+  for (let i = 0; i < 38; i++) {
+    const x = random() * w;
+    const y = random() * h;
+    c.beginPath();
+    c.moveTo(x, y);
+    c.lineTo(x + random() * 2, y + 5 + random() * 24);
+    c.stroke();
+  }
+  addStoneGrain(c, w, h, random, 'rgba(137,157,130,0.08)', 300);
+  addGlow(c, w * 0.73, h * 0.74, Math.min(w, h) * 0.14, 'rgba(170,91,48,0.045)');
+  addVignette(c, w, h, 0.62);
+}
+
+// 3：碎镜之厅——青紫暗厅、悬挂镜片与铺满近景的裂镜三角地面。
+function paintMirrorHall(c, w, h) {
+  const random = seededRandom(37019 + w * 13 + h * 7);
+  fillBackground(c, w, h, [[0, '#0c1017'], [0.52, '#0d0c15'], [1, '#07090d']]);
+  addGlow(c, w * 0.20, h * 0.36, Math.max(w, h) * 0.43, 'rgba(54,104,113,0.12)');
+  addGlow(c, w * 0.80, h * 0.39, Math.max(w, h) * 0.43, 'rgba(91,61,109,0.13)');
+
+  // 两侧高柱与狭长镜面把反光延伸到画面边缘。
+  for (let i = 0; i < 5; i++) {
+    const inset = i * w * 0.055;
+    const alpha = 0.12 + i * 0.018;
+    polygon(c, [[inset, 0], [inset + w * 0.035, 0], [inset + w * 0.07, h * 0.63], [inset + w * 0.02, h * 0.67]],
+      '#0a0d12', `rgba(107,137,145,${alpha})`);
+    polygon(c, [[w - inset, 0], [w - inset - w * 0.035, 0], [w - inset - w * 0.07, h * 0.63], [w - inset - w * 0.02, h * 0.67]],
+      '#0b0b12', `rgba(137,108,148,${alpha})`);
+  }
+
+  const horizon = h * 0.50;
+  const floor = c.createLinearGradient(0, horizon, 0, h);
+  floor.addColorStop(0, '#11141b');
+  floor.addColorStop(1, '#0a0b11');
+  c.fillStyle = floor;
+  c.fillRect(0, horizon, w, h - horizon);
+
+  // 三角碎镜铺满整个地面，接缝同时充当透视线。
+  const columns = 8;
+  const rows = 5;
+  const nodes = [];
+  for (let row = 0; row <= rows; row++) {
+    const line = [];
+    const t = row / rows;
+    const y = horizon + (h - horizon) * Math.pow(t, 1.18);
+    for (let col = 0; col <= columns; col++) {
+      const edge = col === 0 || col === columns;
+      line.push([
+        col * w / columns + (edge ? 0 : (random() - 0.5) * w * 0.055),
+        row === 0 || row === rows ? y : y + (random() - 0.5) * h * 0.045
+      ]);
+    }
+    nodes.push(line);
+  }
+  const facetColors = ['rgba(76,108,119,0.12)', 'rgba(103,77,117,0.12)', 'rgba(123,131,137,0.065)', 'rgba(46,57,70,0.18)'];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const a = nodes[row][col];
+      const b = nodes[row][col + 1];
+      const d = nodes[row + 1][col];
+      const e = nodes[row + 1][col + 1];
+      const split = random() < 0.5;
+      const triangles = split ? [[a, b, e], [a, e, d]] : [[a, b, d], [b, e, d]];
+      for (const triangle of triangles) {
+        polygon(c, triangle, facetColors[Math.floor(random() * facetColors.length)], 'rgba(130,143,153,0.16)', 0.8);
+      }
+    }
+  }
+
+  for (let i = 0; i < 22; i++) {
+    const x = random() * w;
+    const y = h * (0.05 + random() * 0.43);
+    const size = Math.min(w, h) * (0.025 + random() * 0.075);
+    const lean = (random() - 0.5) * size;
+    const points = [[x, y - size], [x + size * 0.42, y + lean], [x + size * 0.12, y + size], [x - size * 0.38, y + size * 0.18]];
+    polygon(c, points, i % 2 ? 'rgba(88,108,126,0.17)' : 'rgba(110,83,126,0.17)', 'rgba(154,165,177,0.27)', 1);
+    c.strokeStyle = i % 3 ? 'rgba(147,181,188,0.24)' : 'rgba(183,154,190,0.24)';
+    c.beginPath();
+    c.moveTo(x, y - size);
+    c.lineTo(x + size * 0.12, y + size);
+    c.stroke();
+  }
+
+  // 从撞击点伸出的主裂缝比三角拼缝更亮、更不规则。
+  const impactX = w * 0.53;
+  const impactY = h * 0.70;
+  c.strokeStyle = 'rgba(161,171,183,0.25)';
+  c.lineWidth = 1.1;
+  for (let i = 0; i < 13; i++) {
+    const angle = random() * TAU;
+    const length = Math.max(w, h) * (0.16 + random() * 0.42);
+    const midX = impactX + Math.cos(angle) * length * 0.48 + (random() - 0.5) * 25;
+    const midY = impactY + Math.sin(angle) * length * 0.30 + (random() - 0.5) * 18;
+    c.beginPath();
+    c.moveTo(impactX, impactY);
+    c.lineTo(midX, midY);
+    c.lineTo(impactX + Math.cos(angle) * length, impactY + Math.sin(angle) * length * 0.65);
+    c.stroke();
+  }
+  addStoneGrain(c, w, h, random, 'rgba(154,166,180,0.065)', 180);
+  addVignette(c, w, h, 0.62);
+}
+
+// 4：无光深井——近黑井壁、分段石环和吞没光线的圆形井心。
+function paintLightlessWell(c, w, h) {
+  const random = seededRandom(49033 + w * 17 + h * 5);
+  fillBackground(c, w, h, [[0, '#070909'], [0.55, '#050606'], [1, '#030404']]);
+  addGlow(c, w * 0.5, h * 0.51, Math.max(w, h) * 0.47, 'rgba(67,74,69,0.09)');
+  const cx = w * 0.5;
+  const cy = h * 0.51;
+  const radius = Math.min(w, h) * 0.405;
+  const inner = radius * 0.64;
+
+  c.strokeStyle = 'rgba(92,99,93,0.08)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 26; i++) {
+    const angle = random() * TAU;
+    const outer = radius * (1.15 + random() * 1.4);
+    c.beginPath();
+    c.moveTo(cx + Math.cos(angle) * radius * 0.98, cy + Math.sin(angle) * radius * 0.98);
+    c.lineTo(cx + Math.cos(angle + 0.025) * outer, cy + Math.sin(angle + 0.025) * outer);
+    c.stroke();
+  }
+
+  const segments = 32;
+  for (let i = 0; i < segments; i++) {
+    const a0 = i * TAU / segments + 0.006;
+    const a1 = (i + 1) * TAU / segments - 0.006;
+    const outer = radius * (0.98 + random() * 0.035);
+    c.beginPath();
+    c.arc(cx, cy, outer, a0, a1);
+    c.arc(cx, cy, inner * (0.98 + random() * 0.025), a1, a0, true);
+    c.closePath();
+    c.fillStyle = i % 3 === 0 ? '#151716' : (i % 2 ? '#101212' : '#121414');
+    c.fill();
+    c.strokeStyle = 'rgba(91,96,90,0.16)';
+    c.lineWidth = 0.8;
+    c.stroke();
+  }
+  for (let i = 0; i < 5; i++) {
+    c.beginPath();
+    c.arc(cx, cy, inner + (radius - inner) * (i + 0.5) / 5, 0, TAU);
+    c.strokeStyle = `rgba(104,108,101,${0.045 + i * 0.012})`;
+    c.stroke();
+  }
+
+  const abyss = c.createRadialGradient(cx, cy, 0, cx, cy, inner * 1.06);
+  abyss.addColorStop(0, '#010202');
+  abyss.addColorStop(0.68, '#020303');
+  abyss.addColorStop(0.90, '#070909');
+  abyss.addColorStop(1, 'rgba(3,4,4,0)');
+  c.fillStyle = abyss;
+  c.beginPath();
+  c.arc(cx, cy, inner * 1.07, 0, TAU);
+  c.fill();
+  addGlow(c, cx - radius * 0.63, cy + radius * 0.71, Math.min(w, h) * 0.09, 'rgba(182,91,46,0.065)');
+  addStoneGrain(c, w, h, random, 'rgba(130,137,129,0.05)', 240);
+  addVignette(c, w, h, 0.74);
+}
+
+// 5：骨桥——横跨深壑的拱形脊骨桥、骨刺栏杆与暗红底层雾光。
+function paintBoneBridge(c, w, h) {
+  const random = seededRandom(61039 + w * 19 + h * 11);
+  fillBackground(c, w, h, [[0, '#110d0e'], [0.56, '#0d0a0b'], [1, '#080606']]);
+  addGlow(c, w * 0.52, h * 0.84, Math.max(w, h) * 0.52, 'rgba(112,39,34,0.16)');
+
+  polygon(c, [[0, h * 0.30], [w * 0.14, h * 0.38], [w * 0.20, h * 0.70], [w * 0.12, h], [0, h]], '#090708');
+  polygon(c, [[w, h * 0.29], [w * 0.87, h * 0.39], [w * 0.81, h * 0.71], [w * 0.90, h], [w, h]], '#090708');
+  c.strokeStyle = 'rgba(119,79,68,0.11)';
+  for (let i = 0; i < 18; i++) {
+    const x = random() * w;
+    const y = h * (0.66 + random() * 0.34);
+    c.beginPath();
+    c.moveTo(x - 30, y);
+    c.lineTo(x + 25 + random() * 70, y + random() * 8);
+    c.stroke();
+  }
+
+  // 两条同向弧线构成厚重桥体，左右端均越出画布。
+  const bridgeGradient = c.createLinearGradient(0, h * 0.35, 0, h * 0.76);
+  bridgeGradient.addColorStop(0, '#6f685b');
+  bridgeGradient.addColorStop(0.5, '#49443c');
+  bridgeGradient.addColorStop(1, '#292621');
+  c.beginPath();
+  c.moveTo(-w * 0.08, h * 0.66);
+  c.quadraticCurveTo(w * 0.5, h * 0.22, w * 1.08, h * 0.66);
+  c.lineTo(w * 1.08, h * 0.735);
+  c.quadraticCurveTo(w * 0.5, h * 0.355, -w * 0.08, h * 0.735);
+  c.closePath();
+  c.fillStyle = bridgeGradient;
+  c.fill();
+  c.strokeStyle = 'rgba(184,173,150,0.30)';
+  c.lineWidth = 1.5;
+  c.stroke();
+
+  // 主承力骨弓与窄高光保持骨白，而非鲜亮纯白。
+  c.beginPath();
+  c.moveTo(-w * 0.07, h * 0.70);
+  c.quadraticCurveTo(w * 0.5, h * 0.30, w * 1.07, h * 0.70);
+  c.strokeStyle = '#39352f';
+  c.lineWidth = Math.max(5, Math.min(w, h) * 0.018);
+  c.stroke();
+  c.strokeStyle = 'rgba(171,160,139,0.27)';
+  c.lineWidth = 1.5;
+  c.stroke();
+
+  const vertebrae = 19;
+  for (let i = 0; i < vertebrae; i++) {
+    const u = i / (vertebrae - 1);
+    const curve = 2 * u - 1;
+    const x = w * (-0.055 + u * 1.11);
+    const y = h * (0.445 + 0.22 * curve * curve);
+    const tangent = Math.atan(curve * 0.72);
+    c.save();
+    c.translate(x, y);
+    c.rotate(tangent);
+    c.fillStyle = i % 2 ? '#827a69' : '#746d5f';
+    c.strokeStyle = 'rgba(198,187,161,0.25)';
+    c.lineWidth = 0.8;
+    c.beginPath();
+    c.ellipse(0, 0, Math.min(w, h) * 0.023, Math.min(w, h) * 0.013, 0, 0, TAU);
+    c.fill();
+    c.stroke();
+    c.fillStyle = 'rgba(39,35,31,0.55)';
+    c.fillRect(-1, -Math.min(w, h) * 0.012, 2, Math.min(w, h) * 0.024);
+    c.restore();
+
+    if (i > 0 && i < vertebrae - 1) {
+      const spike = Math.min(w, h) * (0.035 + random() * 0.045);
+      c.strokeStyle = 'rgba(154,144,124,0.66)';
+      c.lineWidth = 2 + random() * 2;
+      c.beginPath();
+      c.moveTo(x, y - 3);
+      c.lineTo(x + curve * 5, y - spike);
+      c.stroke();
+      polygon(c, [[x + curve * 5 - 3, y - spike + 5], [x + curve * 5, y - spike - 5], [x + curve * 5 + 3, y - spike + 5]], '#8b8270');
+    }
+  }
+
+  // 桥底垂下钝骨肋，增强“骨桥”而非普通石拱的辨识度。
+  c.strokeStyle = 'rgba(114,105,90,0.33)';
+  c.lineWidth = 2.2;
+  for (let i = 2; i < vertebrae - 2; i += 2) {
+    const u = i / (vertebrae - 1);
+    const curve = 2 * u - 1;
+    const x = w * (-0.055 + u * 1.11);
+    const y = h * (0.48 + 0.22 * curve * curve);
+    const length = Math.min(w, h) * (0.06 + (1 - Math.abs(curve)) * 0.055);
+    c.beginPath();
+    c.moveTo(x, y);
+    c.quadraticCurveTo(x + curve * 17, y + length * 0.65, x + curve * 11, y + length);
+    c.stroke();
+  }
+  addStoneGrain(c, w, h, random, 'rgba(180,158,137,0.06)', 210);
+  addVignette(c, w, h, 0.66);
+}
+
+const staticPainters = [paintAshCorridor, paintWhisperFork, paintMossSteps, paintMirrorHall, paintLightlessWell, paintBoneBridge];
+const particleCounts = [42, 18, 24, 18, 30, 24];
+const fogCounts = [2, 5, 4, 2, 1, 5];
+
+function makeParticles(index) {
+  const random = seededRandom(8009 + index * 7919);
+  const particles = [];
+  for (let i = 0; i < particleCounts[index]; i++) {
+    particles.push({
+      x: random(),
+      y: random(),
+      size: 0.55 + random() * 1.65,
+      speed: 0.35 + random() * 1.35,
+      phase: random() * TAU,
+      drift: 0.012 + random() * 0.045,
+      alpha: 0.16 + random() * 0.44,
+      kind: i % 9
+    });
+  }
+  return particles;
+}
+
+function makeFog(index) {
+  const random = seededRandom(9011 + index * 6151);
+  const fog = [];
+  for (let i = 0; i < fogCounts[index]; i++) {
+    fog.push({
+      x: random(),
+      y: 0.27 + random() * 0.66,
+      width: 0.48 + random() * 0.48,
+      height: 0.08 + random() * 0.13,
+      speed: (0.004 + random() * 0.009) * (i % 2 ? -1 : 1),
+      phase: random() * TAU,
+      alpha: 0.32 + random() * 0.30
+    });
+  }
+  return fog;
+}
+
+// 雾和余烬光晕也预绘成贴图，避免每帧创建径向渐变或开启阴影模糊。
+function getSprites(index) {
+  if (spriteByTheme[index]) return spriteByTheme[index];
+  const fogSurface = createSurface(192, 96);
+  if (fogSurface) {
+    const c = fogSurface.ctx;
+    c.translate(96, 48);
+    c.scale(2, 1);
+    const gradient = c.createRadialGradient(0, 0, 0, 0, 0, 48);
+    gradient.addColorStop(0, `rgba(${fogColors[index]},0.24)`);
+    gradient.addColorStop(0.48, `rgba(${fogColors[index]},0.12)`);
+    gradient.addColorStop(1, `rgba(${fogColors[index]},0)`);
+    c.fillStyle = gradient;
+    c.fillRect(-48, -48, 96, 96);
+  }
+  const glowSurface = createSurface(32, 32);
+  if (glowSurface) {
+    const c = glowSurface.ctx;
+    const gradient = c.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gradient.addColorStop(0, 'rgba(225,139,79,0.72)');
+    gradient.addColorStop(0.18, 'rgba(198,99,52,0.34)');
+    gradient.addColorStop(1, 'rgba(151,67,35,0)');
+    c.fillStyle = gradient;
+    c.fillRect(0, 0, 32, 32);
+  }
+  spriteByTheme[index] = {
+    fog: fogSurface ? fogSurface.canvas : null,
+    glow: glowSurface ? glowSurface.canvas : null
+  };
+  return spriteByTheme[index];
+}
+
+function getCache(index, w, h) {
+  const old = cacheByTheme[index];
+  if (old && old.w === w && old.h === h) return old;
+
+  // 超大画布适当降低缓存分辨率，限制六套主题的总内存；合成时仍铺满原尺寸。
+  const scale = Math.min(1, 1600 / w, 1600 / h, Math.sqrt(1800000 / (w * h)));
+  const surface = createSurface(Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)), true);
+  if (surface) {
+    surface.ctx.save();
+    surface.ctx.scale(scale, scale);
+    staticPainters[index](surface.ctx, w, h);
+    surface.ctx.restore();
+  }
+  const entry = {
+    w,
+    h,
+    canvas: surface ? surface.canvas : null,
+    particles: makeParticles(index),
+    fog: makeFog(index),
+    sprites: getSprites(index)
+  };
+  cacheByTheme[index] = entry;
+  return entry;
+}
+
+function drawFog(c, entry, w, h, time) {
+  const sprite = entry.sprites.fog;
+  if (!sprite) return;
+  for (const fog of entry.fog) {
+    const fw = w * fog.width;
+    const fh = h * fog.height;
+    const span = w + fw * 2;
+    const x = mod(fog.x * span + time * fog.speed * w, span) - fw;
+    const y = (fog.y + Math.sin(time * 0.10 + fog.phase) * 0.022) * h;
+    c.globalAlpha = fog.alpha * (0.82 + Math.sin(time * 0.16 + fog.phase) * 0.18);
+    c.drawImage(sprite, x - fw * 0.5, y - fh * 0.5, fw, fh);
+  }
+}
+
+function drawGlow(c, sprite, x, y, size, alpha) {
+  if (!sprite) return;
+  c.globalAlpha = alpha;
+  c.drawImage(sprite, x - size * 0.5, y - size * 0.5, size, size);
+}
+
+function drawAsh(c, entry, w, h, time) {
+  const glow = entry.sprites.glow;
+  c.fillStyle = '#9d9183';
+  for (const p of entry.particles) {
+    const x = mod(p.x * w + Math.sin(time * 0.23 + p.phase) * w * p.drift + time * p.speed * 2.5, w + 24) - 12;
+    const y = mod(p.y * h + time * (7 + p.speed * 10), h + 24) - 12;
+    if (p.kind === 0) {
+      const pulse = 0.56 + Math.sin(time * 1.1 + p.phase) * 0.30;
+      drawGlow(c, glow, x, y, 7 + p.size * 4, p.alpha * pulse);
+    } else {
+      c.globalAlpha = p.alpha * 0.60;
+      c.fillRect(x, y, p.size, p.size * 1.75);
+    }
+  }
+}
+
+function drawWhispers(c, entry, w, h, time) {
+  const glow = entry.sprites.glow;
+  c.fillStyle = '#a18baa';
+  for (const p of entry.particles) {
+    const x = mod(p.x * w + Math.sin(time * 0.16 + p.phase) * w * (0.025 + p.drift), w);
+    const y = mod(p.y * h - time * p.speed * 1.8, h);
+    const alpha = p.alpha * (0.35 + Math.sin(time * 0.42 + p.phase) * 0.30);
+    if (p.kind === 0) {
+      drawGlow(c, glow, x, y, 6 + p.size * 3, alpha * 0.35);
+    } else {
+      c.globalAlpha = Math.max(0.03, alpha);
+      c.fillRect(x, y, p.size * 2.4, 0.7);
+    }
+  }
+}
+
+function drawMoss(c, entry, w, h, time) {
+  const glow = entry.sprites.glow;
+  c.strokeStyle = '#8c9f90';
+  c.lineWidth = 0.7;
+  c.fillStyle = '#a59a78';
+  for (const p of entry.particles) {
+    const x = p.x * w + Math.sin(time * 0.18 + p.phase) * w * p.drift * 0.35;
+    if (p.kind % 3 === 0) {
+      const y = mod(p.y * h + time * (12 + p.speed * 13), h + 16) - 8;
+      c.globalAlpha = p.alpha * 0.38;
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x + 0.4, y + 3 + p.size * 3);
+      c.stroke();
+    } else {
+      const y = mod(p.y * h - time * p.speed * 2.1, h + 12) - 6;
+      if (p.kind === 5) {
+        drawGlow(c, glow, x, y, 6 + p.size * 3, p.alpha * 0.25);
+      } else {
+        c.globalAlpha = p.alpha * 0.38;
+        c.fillRect(x, y, p.size * 0.65, p.size * 0.65);
+      }
+    }
+  }
+}
+
+function drawMirrorGlints(c, entry, w, h, time) {
+  c.lineWidth = 0.8;
+  for (const p of entry.particles) {
+    const wave = Math.max(0, Math.sin(time * (0.32 + p.speed * 0.15) + p.phase));
+    const alpha = wave * wave * wave * wave * p.alpha;
+    if (alpha < 0.025) continue;
+    const x = p.x * w + Math.sin(time * 0.09 + p.phase) * 5;
+    const y = p.y * h;
+    const length = 2 + p.size * 3.2;
+    c.globalAlpha = alpha;
+    c.strokeStyle = p.kind === 0 ? '#b59479' : (p.kind % 2 ? '#91abb2' : '#a18ca9');
+    c.beginPath();
+    c.moveTo(x - length, y);
+    c.lineTo(x + length, y);
+    c.moveTo(x, y - length * 0.62);
+    c.lineTo(x, y + length * 0.62);
+    c.stroke();
+  }
+}
+
+function drawWellDust(c, entry, w, h, time) {
+  const cx = w * 0.5;
+  const cy = h * 0.51;
+  const maxRadius = Math.min(w, h) * 0.47;
+  const glow = entry.sprites.glow;
+  c.fillStyle = '#aaa998';
+  for (const p of entry.particles) {
+    const progress = mod(p.y - time * p.speed * 0.0045, 1);
+    const radius = maxRadius * (0.08 + progress * 0.92);
+    const angle = p.phase + time * (0.014 + p.speed * 0.008) * (p.kind % 2 ? 1 : -1);
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius * 0.86;
+    const alpha = Math.sin(progress * Math.PI) * p.alpha;
+    if (p.kind === 0) {
+      drawGlow(c, glow, x, y, 5 + p.size * 3, alpha * 0.40);
+    } else {
+      c.globalAlpha = alpha * 0.70;
+      c.fillRect(x, y, p.size * 0.75, p.size * 0.75);
+    }
+  }
+  c.globalAlpha = 0.07 + Math.sin(time * 0.32) * 0.025;
+  c.strokeStyle = '#a69b82';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.arc(cx, cy, maxRadius * 0.87 * (1 + Math.sin(time * 0.25) * 0.004), 0, TAU);
+  c.stroke();
+}
+
+function drawBoneAsh(c, entry, w, h, time) {
+  const glow = entry.sprites.glow;
+  c.fillStyle = '#b0a592';
+  for (const p of entry.particles) {
+    const x = mod(p.x * w + Math.sin(time * 0.17 + p.phase) * w * p.drift, w + 20) - 10;
+    const y = mod(p.y * h - time * (3 + p.speed * 5), h + 20) - 10;
+    if (p.kind === 0 || p.kind === 5) {
+      drawGlow(c, glow, x, y, 6 + p.size * 4, p.alpha * (0.35 + Math.sin(time * 0.65 + p.phase) * 0.15));
+    } else {
+      c.globalAlpha = p.alpha * 0.46;
+      c.fillRect(x, y, p.size * 0.75, p.size * 0.75);
+    }
+  }
+}
+
+const dynamicPainters = [drawAsh, drawWhispers, drawMoss, drawMirrorGlints, drawWellDust, drawBoneAsh];
+
+/**
+ * 在屏幕坐标中绘制全幅地图背景。
+ * mapIndex 支持负数与任意整数并循环取模；time 建议使用秒。
+ */
+function drawMapBackground(c, mapIndex, w, h, time) {
+  if (!c || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
+  const rawIndex = Number.isFinite(mapIndex) ? Math.trunc(mapIndex) : 0;
+  const index = mod(rawIndex, MAP_THEMES.length);
+  const width = Math.max(1, Math.round(w));
+  const height = Math.max(1, Math.round(h));
+  const t = Number.isFinite(time) ? time : 0;
+  const entry = getCache(index, width, height);
+
+  c.save();
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = 'source-over';
+  if (entry.canvas) {
+    c.drawImage(entry.canvas, 0, 0, width, height);
+  } else {
+    // 极少数无离屏能力的环境仍可显示完整背景。
+    staticPainters[index](c, width, height);
+  }
+  drawFog(c, entry, width, height, t);
+  dynamicPainters[index](c, entry, width, height, t);
+  c.restore();
+}
+
+// ── js/ui/boss-art-a.js ──
+// 「烬渊」前六 Boss 的独立 Canvas 2D 美术模块。
+// 世界单位以碰撞半径为 1；静态躯体离屏缓存，每帧仅合成光效与少量运动结构。
+
+const BOSS_TAU = Math.PI * 2;
+const SPRITE_SIZE = 384;
+const SPRITE_UNIT = 128;
+const SPRITE_EXTENT = SPRITE_SIZE / SPRITE_UNIT;
+const sprites = new Array(6);
+
+const WATCHER_FISSURES = [
+  [[-0.48, -0.67], [-0.31, -0.43], [-0.37, -0.20], [-0.15, 0.02], [-0.21, 0.28]],
+  [[0.50, -0.55], [0.30, -0.33], [0.37, -0.10], [0.16, 0.13], [0.25, 0.43], [0.10, 0.71]],
+  [[-0.58, 0.30], [-0.38, 0.23], [-0.21, 0.28], [-0.08, 0.52]],
+  [[0.37, -0.10], [0.57, 0.01], [0.62, 0.20]]
+];
+
+const CRACKS = [
+  WATCHER_FISSURES,
+  [
+    [[-0.30, 0.02], [-0.12, 0.19], [-0.19, 0.38], [0.02, 0.57], [-0.05, 0.79]],
+    [[0.34, 0.11], [0.17, 0.28], [0.23, 0.48], [0.08, 0.62]],
+    [[-0.24, -0.57], [-0.08, -0.45], [-0.14, -0.30], [0.02, -0.20]]
+  ],
+  [
+    [[-0.10, -0.69], [0.02, -0.54], [-0.06, -0.38], [0.08, -0.20]],
+    [[-0.48, 0.13], [-0.25, 0.28], [-0.32, 0.52], [-0.12, 0.75]],
+    [[0.38, 0.06], [0.23, 0.25], [0.35, 0.48], [0.23, 0.72]]
+  ],
+  [
+    [[-0.27, -0.48], [-0.14, -0.30], [-0.25, -0.12], [-0.06, 0.04]],
+    [[0.49, -0.31], [0.31, -0.15], [0.40, 0.04], [0.19, 0.23]],
+    [[-0.81, 0.19], [-0.62, 0.27], [-0.49, 0.45]]
+  ],
+  [
+    [[-0.47, -0.41], [-0.25, -0.24], [-0.31, -0.04], [-0.08, 0.13], [-0.15, 0.39]],
+    [[0.42, -0.46], [0.25, -0.24], [0.34, -0.05], [0.12, 0.13]],
+    [[0.51, 0.30], [0.30, 0.25], [0.16, 0.47], [-0.03, 0.55]]
+  ],
+  [
+    [[-0.14, -0.67], [0.01, -0.52], [-0.08, -0.35], [0.09, -0.20]],
+    [[-0.39, 0.04], [-0.20, 0.22], [-0.28, 0.45], [-0.08, 0.69]],
+    [[0.37, 0.14], [0.19, 0.30], [0.27, 0.55], [0.10, 0.82]]
+  ]
+];
+
+function bossClamp(value, min = 0, max = 1) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : min;
+}
+
+function bossSurface() {
+  let canvas = null;
+  if (typeof OffscreenCanvas !== 'undefined') {
+    try {
+      canvas = new OffscreenCanvas(SPRITE_SIZE, SPRITE_SIZE);
+    } catch {
+      canvas = null;
+    }
+  }
+  if (!canvas && typeof document !== 'undefined') {
+    canvas = document.createElement('canvas');
+    canvas.width = SPRITE_SIZE;
+    canvas.height = SPRITE_SIZE;
+  }
+  return canvas;
+}
+
+function bossSprites(index) {
+  if (sprites[index] !== undefined) return sprites[index];
+  const base = bossSurface();
+  const baseContext = base && base.getContext('2d', { alpha: true });
+  if (!baseContext) {
+    sprites[index] = null;
+    return null;
+  }
+
+  baseContext.translate(SPRITE_SIZE / 2, SPRITE_SIZE / 2);
+  baseContext.scale(SPRITE_UNIT, SPRITE_UNIT);
+  baseContext.lineCap = 'round';
+  baseContext.lineJoin = 'round';
+  paintBase(baseContext, index);
+
+  const white = bossSurface();
+  const whiteContext = white && white.getContext('2d', { alpha: true });
+  if (whiteContext) {
+    whiteContext.drawImage(base, 0, 0);
+    whiteContext.globalCompositeOperation = 'source-in';
+    whiteContext.fillStyle = '#ffffff';
+    whiteContext.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+  }
+
+  sprites[index] = { base, white: whiteContext ? white : base };
+  return sprites[index];
+}
+
+function bossPolygon(c, points, fill, stroke, width = 0.03) {
+  c.beginPath();
+  c.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
+  c.closePath();
+  if (fill) {
+    c.fillStyle = fill;
+    c.fill();
+  }
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = width;
+    c.stroke();
+  }
+}
+
+function circle(c, x, y, radius, fill, stroke, width = 0.025) {
+  c.beginPath();
+  c.arc(x, y, radius, 0, BOSS_TAU);
+  if (fill) {
+    c.fillStyle = fill;
+    c.fill();
+  }
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = width;
+    c.stroke();
+  }
+}
+
+function ellipse(c, x, y, rx, ry, fill, stroke, width = 0.025, rotation = 0) {
+  c.beginPath();
+  c.ellipse(x, y, rx, ry, rotation, 0, BOSS_TAU);
+  if (fill) {
+    c.fillStyle = fill;
+    c.fill();
+  }
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = width;
+    c.stroke();
+  }
+}
+
+function glow(c, x, y, radius, inner, outer = 'rgba(0,0,0,0)') {
+  const gradient = c.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, inner);
+  gradient.addColorStop(1, outer);
+  c.fillStyle = gradient;
+  c.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+function star(c, x, y, radius, color, rotation = 0) {
+  c.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const angle = rotation + i * Math.PI / 4;
+    const r = i % 2 ? radius * 0.22 : radius;
+    const px = x + Math.cos(angle) * r;
+    const py = y + Math.sin(angle) * r;
+    if (i === 0) c.moveTo(px, py);
+    else c.lineTo(px, py);
+  }
+  c.closePath();
+  c.fillStyle = color;
+  c.fill();
+}
+
+function strokeLines(c, lines, color, width, alpha = 1) {
+  c.save();
+  c.globalAlpha *= alpha;
+  c.strokeStyle = color;
+  c.lineWidth = width;
+  for (const line of lines) {
+    c.beginPath();
+    c.moveTo(line[0][0], line[0][1]);
+    for (let i = 1; i < line.length; i++) c.lineTo(line[i][0], line[i][1]);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function gearPath(c, x, y, root, outer, teeth) {
+  c.beginPath();
+  for (let i = 0; i < teeth * 4; i++) {
+    const angle = i * BOSS_TAU / (teeth * 4);
+    const radius = i % 4 === 1 || i % 4 === 2 ? outer : root;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + Math.sin(angle) * radius;
+    if (i === 0) c.moveTo(px, py);
+    else c.lineTo(px, py);
+  }
+  c.closePath();
+}
+
+function drawGear(c, x, y, radius, teeth, angle, color) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(angle);
+  gearPath(c, 0, 0, radius * 0.82, radius, teeth);
+  c.fillStyle = color;
+  c.fill();
+  c.strokeStyle = '#100d12';
+  c.lineWidth = 0.025;
+  c.stroke();
+  circle(c, 0, 0, radius * 0.55, '#151119', '#76543b', 0.018);
+  c.strokeStyle = color;
+  c.lineWidth = radius * 0.12;
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    c.beginPath();
+    c.moveTo(Math.cos(a) * radius * 0.18, Math.sin(a) * radius * 0.18);
+    c.lineTo(Math.cos(a) * radius * 0.52, Math.sin(a) * radius * 0.52);
+    c.stroke();
+  }
+  circle(c, 0, 0, radius * 0.15, '#b07a45', '#21151a', 0.018);
+  c.restore();
+}
+
+function almondPath(c, x, y, halfWidth, halfHeight) {
+  c.beginPath();
+  c.moveTo(x - halfWidth, y);
+  c.bezierCurveTo(x - halfWidth * 0.45, y - halfHeight * 1.25,
+    x + halfWidth * 0.45, y - halfHeight * 1.25, x + halfWidth, y);
+  c.bezierCurveTo(x + halfWidth * 0.45, y + halfHeight * 1.25,
+    x - halfWidth * 0.45, y + halfHeight * 1.25, x - halfWidth, y);
+  c.closePath();
+}
+
+function drawEye(c, x, y, halfWidth, halfHeight, color, pupilRatio = 0.42) {
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  glow(c, x, y, halfWidth * 2.1, color);
+  c.globalCompositeOperation = 'source-over';
+  const gradient = c.createRadialGradient(x, y, 0, x, y, halfWidth);
+  gradient.addColorStop(0, '#ffe080');
+  gradient.addColorStop(0.38, color);
+  gradient.addColorStop(1, '#7a281d');
+  almondPath(c, x, y, halfWidth, halfHeight);
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#2a1516';
+  c.lineWidth = 0.018;
+  c.stroke();
+  ellipse(c, x, y, halfWidth * pupilRatio * 0.34, halfHeight * 0.88, '#100c10');
+  circle(c, x - halfWidth * 0.16, y - halfHeight * 0.28, halfHeight * 0.16, '#ffe8b0');
+  c.restore();
+}
+
+function limb(c, points, outerWidth, innerWidth, innerColor) {
+  c.beginPath();
+  c.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
+  c.strokeStyle = '#07080d';
+  c.lineWidth = outerWidth;
+  c.stroke();
+  c.strokeStyle = innerColor;
+  c.lineWidth = innerWidth;
+  c.stroke();
+}
+
+function tentacle(c, start, control1, control2, end, width, color) {
+  c.beginPath();
+  c.moveTo(start[0], start[1]);
+  c.bezierCurveTo(control1[0], control1[1], control2[0], control2[1], end[0], end[1]);
+  c.strokeStyle = '#07080d';
+  c.lineWidth = width + 0.07;
+  c.stroke();
+  c.strokeStyle = color;
+  c.lineWidth = width;
+  c.stroke();
+}
+
+function boneSegment(c, x1, y1, x2, y2, width = 0.045) {
+  c.beginPath();
+  c.moveTo(x1, y1);
+  c.lineTo(x2, y2);
+  c.strokeStyle = '#211b20';
+  c.lineWidth = width + 0.028;
+  c.stroke();
+  c.strokeStyle = '#b9ad94';
+  c.lineWidth = width;
+  c.stroke();
+  circle(c, x2, y2, width * 0.52, '#c5b89d');
+}
+
+// 0：灰烬守望者——背负厚甲的巨盾守卫。
+function watcherShieldPath(c) {
+  c.beginPath();
+  c.moveTo(-0.69, -0.73);
+  c.quadraticCurveTo(0, -0.94, 0.69, -0.73);
+  c.lineTo(0.76, 0.24);
+  c.bezierCurveTo(0.66, 0.61, 0.32, 0.88, 0, 1.05);
+  c.bezierCurveTo(-0.32, 0.88, -0.66, 0.61, -0.76, 0.24);
+  c.closePath();
+}
+
+function paintWatcher(c) {
+  let gradient = c.createLinearGradient(0, -1, 0, 1);
+  gradient.addColorStop(0, '#282029');
+  gradient.addColorStop(0.55, '#111117');
+  gradient.addColorStop(1, '#08090d');
+  c.beginPath();
+  c.moveTo(-0.72, -0.66);
+  c.lineTo(-0.96, -0.20);
+  c.lineTo(-0.84, 0.74);
+  c.lineTo(-0.43, 0.96);
+  c.lineTo(0.48, 0.96);
+  c.lineTo(0.86, 0.69);
+  c.lineTo(0.96, -0.22);
+  c.lineTo(0.70, -0.67);
+  c.closePath();
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#07080c';
+  c.lineWidth = 0.11;
+  c.stroke();
+
+  ellipse(c, -0.66, -0.49, 0.38, 0.27, '#2d252b', '#594037', 0.045, -0.28);
+  ellipse(c, 0.66, -0.49, 0.38, 0.27, '#2d252b', '#594037', 0.045, 0.28);
+  bossPolygon(c, [[-0.91, -0.60], [-0.77, -0.93], [-0.60, -0.65]], '#17141a', '#49332f', 0.035);
+  bossPolygon(c, [[0.91, -0.60], [0.77, -0.93], [0.60, -0.65]], '#17141a', '#49332f', 0.035);
+
+  watcherShieldPath(c);
+  gradient = c.createLinearGradient(-0.7, -0.8, 0.65, 0.9);
+  gradient.addColorStop(0, '#3a3032');
+  gradient.addColorStop(0.35, '#211d24');
+  gradient.addColorStop(0.72, '#15141b');
+  gradient.addColorStop(1, '#2a1c1d');
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#090a0e';
+  c.lineWidth = 0.12;
+  c.stroke();
+  c.strokeStyle = '#6c4938';
+  c.lineWidth = 0.045;
+  c.stroke();
+
+  c.save();
+  c.translate(0, 0.03);
+  c.scale(0.86, 0.86);
+  watcherShieldPath(c);
+  c.strokeStyle = '#4b3733';
+  c.lineWidth = 0.035;
+  c.stroke();
+  c.restore();
+
+  c.strokeStyle = '#100f15';
+  c.lineWidth = 0.055;
+  c.beginPath();
+  c.moveTo(0, -0.80);
+  c.lineTo(0, -0.37);
+  c.moveTo(0, 0.15);
+  c.lineTo(0, 0.91);
+  c.moveTo(-0.63, 0.30);
+  c.quadraticCurveTo(0, 0.49, 0.63, 0.30);
+  c.stroke();
+  c.strokeStyle = '#72503c';
+  c.lineWidth = 0.016;
+  c.beginPath();
+  c.moveTo(-0.55, -0.64);
+  c.quadraticCurveTo(0, -0.76, 0.55, -0.64);
+  c.moveTo(-0.50, 0.62);
+  c.quadraticCurveTo(0, 0.84, 0.50, 0.62);
+  c.stroke();
+
+  almondPath(c, 0, -0.17, 0.39, 0.19);
+  c.fillStyle = '#08090d';
+  c.fill();
+  c.strokeStyle = '#72503d';
+  c.lineWidth = 0.055;
+  c.stroke();
+  bossPolygon(c, [[-0.44, -0.22], [-0.30, -0.42], [0, -0.48], [0.30, -0.42], [0.44, -0.22],
+    [0.26, -0.31], [-0.26, -0.31]], '#30262a', '#100f14', 0.025);
+
+  c.save();
+  c.shadowColor = 'rgba(221,103,43,0.55)';
+  c.shadowBlur = 9;
+  strokeLines(c, WATCHER_FISSURES, '#b65b30', 0.018, 0.72);
+  c.restore();
+  for (const point of [[-0.54, -0.55], [0.54, -0.55], [-0.48, 0.43], [0.48, 0.43], [0, 0.77]]) {
+    circle(c, point[0], point[1], 0.035, '#806047', '#171218', 0.015);
+  }
+}
+
+// 1：深渊织母——八条分节织网腿、卵囊与六眼。
+const SPIDER_LEG = [
+  [[0.27, -0.35], [0.69, -0.70], [1.10, -0.79], [1.30, -1.13]],
+  [[0.37, -0.15], [0.85, -0.29], [1.19, -0.12], [1.37, -0.38]],
+  [[0.39, 0.10], [0.86, 0.25], [1.14, 0.58], [1.34, 0.43]],
+  [[0.27, 0.33], [0.62, 0.72], [0.82, 1.03], [1.08, 1.17]]
+];
+
+function paintSpiderMother(c) {
+  c.save();
+  c.strokeStyle = 'rgba(116,91,125,0.26)';
+  c.lineWidth = 0.009;
+  for (const radius of [0.92, 1.15, 1.34]) {
+    c.beginPath();
+    c.arc(0, 0.02, radius, Math.PI * 1.06, Math.PI * 1.94);
+    c.stroke();
+  }
+  for (let i = 0; i < 7; i++) {
+    const angle = Math.PI * (1.08 + i * 0.14);
+    c.beginPath();
+    c.moveTo(Math.cos(angle) * 0.42, Math.sin(angle) * 0.42);
+    c.lineTo(Math.cos(angle) * 1.38, Math.sin(angle) * 1.38);
+    c.stroke();
+  }
+  c.restore();
+
+  for (const side of [-1, 1]) {
+    for (const source of SPIDER_LEG) {
+      const points = source.map(point => [point[0] * side, point[1]]);
+      limb(c, points, 0.14, 0.074, '#302534');
+      for (let i = 1; i < points.length - 1; i++) {
+        circle(c, points[i][0], points[i][1], 0.071, '#3c2d3c', '#0b0a10', 0.025);
+        circle(c, points[i][0], points[i][1], 0.026, '#74505a');
+      }
+    }
+  }
+
+  let gradient = c.createRadialGradient(-0.16, 0.02, 0.05, 0, 0.30, 0.72);
+  gradient.addColorStop(0, '#493348');
+  gradient.addColorStop(0.48, '#2b202f');
+  gradient.addColorStop(1, '#100f17');
+  ellipse(c, 0, 0.30, 0.59, 0.70, gradient, '#08090e', 0.10);
+  ellipse(c, 0, 0.30, 0.52, 0.62, null, '#644252', 0.025);
+  c.strokeStyle = '#553745';
+  c.lineWidth = 0.025;
+  for (const y of [0.02, 0.25, 0.49]) {
+    c.beginPath();
+    c.moveTo(-0.48, y);
+    c.quadraticCurveTo(0, y + 0.20, 0.48, y);
+    c.stroke();
+  }
+  for (const egg of [[-0.25, 0.12, 0.10], [0.19, 0.07, 0.085], [-0.05, 0.36, 0.12],
+    [0.28, 0.42, 0.075], [-0.29, 0.51, 0.08], [0.04, 0.68, 0.065]]) {
+    ellipse(c, egg[0], egg[1], egg[2], egg[2] * 1.18, '#392b3c', '#785364', 0.018);
+    circle(c, egg[0] - egg[2] * 0.2, egg[1] - egg[2] * 0.25, egg[2] * 0.22, '#60817e');
+  }
+
+  gradient = c.createLinearGradient(0, -0.85, 0, 0.1);
+  gradient.addColorStop(0, '#45303e');
+  gradient.addColorStop(1, '#17131c');
+  ellipse(c, 0, -0.34, 0.43, 0.43, gradient, '#090a0f', 0.09);
+  for (const side of [-1, 1]) {
+    bossPolygon(c, [[side * 0.10, -0.68], [side * 0.35, -0.89], [side * 0.29, -0.54]],
+      '#2d222e', '#694554', 0.025);
+    limb(c, [[side * 0.19, -0.11], [side * 0.38, 0.06], [side * 0.24, 0.20]], 0.10, 0.045, '#59404b');
+  }
+  ellipse(c, 0, -0.48, 0.32, 0.25, '#211924', '#6a4248', 0.025);
+  for (const eye of [[-0.19, -0.54], [0.19, -0.54], [-0.09, -0.43], [0.09, -0.43],
+    [-0.27, -0.40], [0.27, -0.40]]) {
+    circle(c, eye[0], eye[1], 0.055, '#08090d', '#55343e', 0.014);
+  }
+  bossPolygon(c, [[-0.12, 0.91], [0, 1.09], [0.12, 0.91], [0.07, 0.78], [-0.07, 0.78]],
+    '#211924', '#08090d', 0.035);
+}
+
+// 2：无面君王——尖冠、空白面具、长尾披风与权杖。
+function paintFacelessKing(c) {
+  let gradient = c.createLinearGradient(0, -0.8, 0, 1.2);
+  gradient.addColorStop(0, '#2e2232');
+  gradient.addColorStop(0.55, '#17131f');
+  gradient.addColorStop(1, '#090a10');
+  c.beginPath();
+  c.moveTo(-0.30, -0.70);
+  c.bezierCurveTo(-0.72, -0.58, -0.78, -0.16, -0.91, 0.31);
+  c.lineTo(-1.03, 1.04);
+  c.lineTo(-0.66, 0.89);
+  c.lineTo(-0.42, 1.15);
+  c.lineTo(-0.13, 0.96);
+  c.lineTo(0.13, 1.17);
+  c.lineTo(0.42, 0.94);
+  c.lineTo(0.69, 1.10);
+  c.lineTo(1.00, 0.93);
+  c.bezierCurveTo(0.82, 0.25, 0.79, -0.40, 0.31, -0.70);
+  c.closePath();
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#08090e';
+  c.lineWidth = 0.10;
+  c.stroke();
+  c.strokeStyle = '#644334';
+  c.lineWidth = 0.025;
+  c.stroke();
+
+  c.strokeStyle = '#3d2b41';
+  c.lineWidth = 0.04;
+  c.beginPath();
+  c.moveTo(-0.46, -0.25);
+  c.quadraticCurveTo(-0.29, 0.42, -0.42, 0.96);
+  c.moveTo(0.43, -0.27);
+  c.quadraticCurveTo(0.28, 0.44, 0.43, 0.94);
+  c.stroke();
+
+  // 权杖先置于手臂之后。
+  c.beginPath();
+  c.moveTo(0.72, -0.58);
+  c.lineTo(0.79, 1.03);
+  c.strokeStyle = '#090a0e';
+  c.lineWidth = 0.105;
+  c.stroke();
+  c.strokeStyle = '#8b6745';
+  c.lineWidth = 0.045;
+  c.stroke();
+  circle(c, 0.71, -0.66, 0.19, '#17131d', '#8d6848', 0.045);
+  circle(c, 0.71, -0.66, 0.12, '#090b12', '#4d3b51', 0.022);
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    circle(c, 0.71 + Math.cos(a) * 0.19, -0.66 + Math.sin(a) * 0.19, 0.035, '#a1784b');
+  }
+
+  bossPolygon(c, [[-0.42, 0.77], [-0.31, -0.20], [0, -0.37], [0.31, -0.20], [0.43, 0.77],
+    [0.18, 0.96], [0, 0.81], [-0.18, 0.96]], '#24202a', '#0a0a10', 0.06);
+  bossPolygon(c, [[-0.22, 0.69], [-0.16, -0.05], [0, -0.15], [0.16, -0.05], [0.22, 0.69],
+    [0, 0.82]], '#312337', '#6c493b', 0.022);
+  ellipse(c, -0.43, -0.25, 0.28, 0.19, '#332a33', '#75513f', 0.035, -0.25);
+  ellipse(c, 0.43, -0.25, 0.28, 0.19, '#332a33', '#75513f', 0.035, 0.25);
+  ellipse(c, 0.68, -0.02, 0.12, 0.15, '#4a3836', '#171219', 0.03);
+
+  bossPolygon(c, [[0, 0.00], [0.13, 0.15], [0, 0.31], [-0.13, 0.15]], '#0b0b11', '#8e623f', 0.032);
+
+  // 无五官的哑光面具。
+  gradient = c.createLinearGradient(-0.2, -0.75, 0.2, -0.08);
+  gradient.addColorStop(0, '#b0a794');
+  gradient.addColorStop(0.45, '#716d69');
+  gradient.addColorStop(1, '#34343a');
+  c.beginPath();
+  c.moveTo(0, -0.78);
+  c.bezierCurveTo(-0.30, -0.77, -0.31, -0.52, -0.23, -0.25);
+  c.quadraticCurveTo(-0.14, -0.08, 0, -0.03);
+  c.quadraticCurveTo(0.14, -0.08, 0.23, -0.25);
+  c.bezierCurveTo(0.31, -0.52, 0.30, -0.77, 0, -0.78);
+  c.closePath();
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#211c22';
+  c.lineWidth = 0.045;
+  c.stroke();
+  c.strokeStyle = '#c0a474';
+  c.lineWidth = 0.012;
+  c.stroke();
+
+  gradient = c.createLinearGradient(0, -1.18, 0, -0.69);
+  gradient.addColorStop(0, '#c3924f');
+  gradient.addColorStop(0.55, '#725134');
+  gradient.addColorStop(1, '#35282a');
+  bossPolygon(c, [[-0.36, -0.72], [-0.42, -1.05], [-0.20, -0.91], [0, -1.19],
+    [0.17, -0.91], [0.40, -1.07], [0.35, -0.72]], gradient, '#171218', 0.04);
+  bossPolygon(c, [[-0.38, -0.79], [0.38, -0.79], [0.34, -0.66], [-0.34, -0.66]],
+    '#6f4d34', '#b08850', 0.018);
+  circle(c, 0, -0.77, 0.045, '#705378', '#d0a15c', 0.015);
+  circle(c, -0.25, -0.78, 0.025, '#537c7c');
+  circle(c, 0.25, -0.78, 0.025, '#537c7c');
+}
+
+// 3：虚空鲸——横向鲸躯、裂开的巨口、鲸须与星斑。
+function whaleBodyPath(c) {
+  c.beginPath();
+  c.moveTo(-1.14, -0.13);
+  c.bezierCurveTo(-0.95, -0.50, -0.52, -0.66, -0.06, -0.61);
+  c.bezierCurveTo(0.46, -0.58, 0.83, -0.36, 0.97, -0.10);
+  c.bezierCurveTo(0.91, 0.20, 0.58, 0.48, 0.15, 0.61);
+  c.bezierCurveTo(-0.36, 0.76, -0.91, 0.48, -1.12, 0.19);
+  c.quadraticCurveTo(-1.20, 0.02, -1.14, -0.13);
+  c.closePath();
+}
+
+function paintVoidWhale(c) {
+  // 尾鳍与腹鳍置于躯干后方。
+  bossPolygon(c, [[0.76, -0.20], [1.08, -0.26], [1.34, -0.53], [1.39, -0.39],
+    [1.24, -0.03], [1.40, 0.27], [1.30, 0.40], [1.02, 0.16], [0.79, 0.14]],
+    '#1c1a29', '#080a10', 0.075);
+  bossPolygon(c, [[0.04, 0.36], [0.30, 0.83], [0.50, 1.02], [0.60, 0.91], [0.43, 0.31]],
+    '#242033', '#090a10', 0.065);
+  bossPolygon(c, [[0.18, -0.49], [0.39, -0.84], [0.51, -0.48]], '#242031', '#090a10', 0.055);
+
+  let gradient = c.createLinearGradient(-0.45, -0.66, 0.35, 0.70);
+  gradient.addColorStop(0, '#343044');
+  gradient.addColorStop(0.35, '#242334');
+  gradient.addColorStop(0.72, '#171824');
+  gradient.addColorStop(1, '#30212d');
+  whaleBodyPath(c);
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#07090f';
+  c.lineWidth = 0.105;
+  c.stroke();
+  c.strokeStyle = '#554051';
+  c.lineWidth = 0.025;
+  c.stroke();
+
+  // 巨口占据前半身，暗红口腔中露出成排鲸须。
+  c.beginPath();
+  c.moveTo(-1.11, 0.01);
+  c.bezierCurveTo(-0.64, 0.10, -0.10, 0.20, 0.43, 0.01);
+  c.bezierCurveTo(0.16, 0.43, -0.43, 0.66, -0.94, 0.36);
+  c.quadraticCurveTo(-1.08, 0.23, -1.11, 0.01);
+  c.closePath();
+  c.fillStyle = '#090a10';
+  c.fill();
+  c.strokeStyle = '#60363a';
+  c.lineWidth = 0.035;
+  c.stroke();
+  gradient = c.createLinearGradient(-0.8, 0.1, -0.2, 0.5);
+  gradient.addColorStop(0, '#251521');
+  gradient.addColorStop(1, '#4a2528');
+  c.beginPath();
+  c.moveTo(-0.98, 0.18);
+  c.quadraticCurveTo(-0.35, 0.38, 0.22, 0.15);
+  c.quadraticCurveTo(-0.29, 0.57, -0.86, 0.35);
+  c.closePath();
+  c.fillStyle = gradient;
+  c.fill();
+
+  c.strokeStyle = '#9a8976';
+  c.lineWidth = 0.022;
+  for (let i = 0; i < 11; i++) {
+    const x = -0.91 + i * 0.105;
+    const top = 0.10 + Math.sin(i / 10 * Math.PI) * 0.075;
+    const length = 0.17 + Math.sin(i / 10 * Math.PI) * 0.10;
+    c.beginPath();
+    c.moveTo(x, top);
+    c.quadraticCurveTo(x + 0.025, top + length * 0.55, x - 0.015, top + length);
+    c.stroke();
+  }
+
+  c.strokeStyle = '#4c3b4c';
+  c.lineWidth = 0.018;
+  for (let i = 0; i < 4; i++) {
+    c.beginPath();
+    c.moveTo(0.16 + i * 0.12, 0.40 - i * 0.035);
+    c.quadraticCurveTo(0.36 + i * 0.10, 0.49 - i * 0.04, 0.58 + i * 0.07, 0.34 - i * 0.04);
+    c.stroke();
+  }
+
+  const spots = [[-0.49, -0.40, 0.052], [-0.15, -0.46, 0.040], [0.16, -0.39, 0.055],
+    [0.48, -0.24, 0.042], [0.69, -0.10, 0.030], [-0.12, -0.18, 0.032], [0.29, -0.08, 0.030]];
+  c.save();
+  c.shadowColor = 'rgba(93,145,143,0.45)';
+  c.shadowBlur = 7;
+  for (let i = 0; i < spots.length; i++) {
+    const spot = spots[i];
+    star(c, spot[0], spot[1], spot[2], i % 3 ? '#78918f' : '#8d758f', i * 0.31);
+  }
+  c.restore();
+  almondPath(c, -0.73, -0.23, 0.095, 0.055);
+  c.fillStyle = '#080a0f';
+  c.fill();
+  c.strokeStyle = '#6a5154';
+  c.lineWidth = 0.022;
+  c.stroke();
+}
+
+// 4：时序吞者——触须承托的钟盘与多层齿轮。
+function paintTimeDevourer(c) {
+  const arms = [
+    [[-0.43, -0.43], [-0.83, -0.69], [-0.92, -1.14], [-1.25, -1.12]],
+    [[-0.10, -0.61], [-0.25, -0.96], [0.18, -1.05], [0.12, -1.34]],
+    [[0.43, -0.40], [0.78, -0.67], [1.03, -0.50], [1.30, -0.79]],
+    [[0.57, 0.20], [0.99, 0.29], [0.94, 0.77], [1.27, 0.87]],
+    [[0.08, 0.62], [0.02, 0.98], [0.47, 1.00], [0.35, 1.32]],
+    [[-0.49, 0.29], [-0.90, 0.41], [-0.91, 0.87], [-1.29, 0.72]]
+  ];
+  for (let i = 0; i < arms.length; i++) {
+    const arm = arms[i];
+    tentacle(c, arm[0], arm[1], arm[2], arm[3], 0.13, i % 2 ? '#302536' : '#292330');
+    circle(c, arm[3][0], arm[3][1], 0.055, '#47303e', '#0a0a10', 0.025);
+  }
+
+  gearPath(c, 0, 0, 0.77, 0.88, 20);
+  let gradient = c.createRadialGradient(-0.20, -0.25, 0.08, 0, 0, 0.92);
+  gradient.addColorStop(0, '#4a3935');
+  gradient.addColorStop(0.55, '#272127');
+  gradient.addColorStop(1, '#111117');
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#08090e';
+  c.lineWidth = 0.07;
+  c.stroke();
+  circle(c, 0, 0, 0.71, '#17171e', '#8b6544', 0.04);
+  circle(c, 0, 0, 0.62, '#202028', '#493b37', 0.025);
+  circle(c, 0, 0, 0.52, '#13141b', '#72513d', 0.018);
+
+  // 仅有时刻刻痕，不使用数字或文字。
+  for (let i = 0; i < 12; i++) {
+    const angle = i * BOSS_TAU / 12 - Math.PI / 2;
+    const inner = i % 3 === 0 ? 0.51 : 0.55;
+    c.beginPath();
+    c.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+    c.lineTo(Math.cos(angle) * 0.60, Math.sin(angle) * 0.60);
+    c.strokeStyle = i % 3 === 0 ? '#b18652' : '#6f5b48';
+    c.lineWidth = i % 3 === 0 ? 0.030 : 0.018;
+    c.stroke();
+  }
+
+  for (const housing of [[-0.52, -0.40, 0.25], [0.51, -0.37, 0.22], [0.45, 0.46, 0.20]]) {
+    circle(c, housing[0], housing[1], housing[2], '#0c0d13', '#4b3833', 0.03);
+  }
+  circle(c, 0, 0, 0.12, '#090b10', '#9c6b42', 0.025);
+  for (const p of [[-0.62, 0.16], [0.17, -0.64], [-0.23, 0.61]]) {
+    circle(c, p[0], p[1], 0.026, '#6f8b86');
+  }
+}
+
+function boneHand(c, x, y, rotation) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(rotation);
+  ellipse(c, 0, 0, 0.105, 0.13, '#a99e89', '#211b20', 0.025);
+  for (let i = 0; i < 4; i++) {
+    const sx = -0.075 + i * 0.048;
+    const middleX = sx + (i - 1.5) * 0.025;
+    const middleY = -0.19 - (i === 1 || i === 2 ? 0.035 : 0);
+    const endX = middleX + (i - 1.5) * 0.035;
+    const endY = middleY - 0.12 + Math.abs(i - 1.5) * 0.025;
+    boneSegment(c, sx, -0.07, middleX, middleY, 0.035);
+    boneSegment(c, middleX, middleY, endX, endY, 0.030);
+  }
+  boneSegment(c, -0.07, 0.02, -0.19, -0.07, 0.040);
+  boneSegment(c, -0.19, -0.07, -0.21, -0.16, 0.032);
+  c.restore();
+}
+
+// 5：骸骨教皇——骨冠、法袍、张开骨手与圣骸权杖。
+function paintBonePope(c) {
+  let gradient = c.createLinearGradient(0, -0.75, 0, 1.15);
+  gradient.addColorStop(0, '#392b3a');
+  gradient.addColorStop(0.48, '#211925');
+  gradient.addColorStop(1, '#0d0d14');
+  c.beginPath();
+  c.moveTo(-0.31, -0.64);
+  c.lineTo(-0.68, -0.23);
+  c.lineTo(-0.63, 0.23);
+  c.lineTo(-0.83, 1.02);
+  c.lineTo(-0.46, 0.91);
+  c.lineTo(-0.23, 1.13);
+  c.lineTo(0, 0.96);
+  c.lineTo(0.25, 1.14);
+  c.lineTo(0.48, 0.91);
+  c.lineTo(0.82, 1.03);
+  c.lineTo(0.62, 0.19);
+  c.lineTo(0.67, -0.24);
+  c.lineTo(0.31, -0.64);
+  c.closePath();
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#08090e';
+  c.lineWidth = 0.10;
+  c.stroke();
+  c.strokeStyle = '#76533d';
+  c.lineWidth = 0.025;
+  c.stroke();
+
+  bossPolygon(c, [[-0.23, -0.18], [0, -0.29], [0.23, -0.18], [0.36, 0.89], [0, 0.98], [-0.36, 0.89]],
+    '#2d2130', '#72513f', 0.025);
+  c.strokeStyle = '#8a6547';
+  c.lineWidth = 0.022;
+  c.beginPath();
+  c.moveTo(0, -0.15);
+  c.lineTo(0, 0.91);
+  c.moveTo(-0.28, 0.28);
+  c.quadraticCurveTo(0, 0.43, 0.28, 0.28);
+  c.moveTo(-0.31, 0.66);
+  c.quadraticCurveTo(0, 0.81, 0.31, 0.66);
+  c.stroke();
+  for (const y of [0.18, 0.52, 0.82]) {
+    bossPolygon(c, [[0, y - 0.055], [0.055, y], [0, y + 0.055], [-0.055, y]], '#6c513d');
+  }
+
+  // 圣骸权杖。
+  c.beginPath();
+  c.moveTo(0.72, -0.54);
+  c.lineTo(0.78, 1.02);
+  c.strokeStyle = '#151219';
+  c.lineWidth = 0.10;
+  c.stroke();
+  c.strokeStyle = '#9b815e';
+  c.lineWidth = 0.042;
+  c.stroke();
+  circle(c, 0.71, -0.65, 0.18, '#18151c', '#a1845c', 0.04);
+  circle(c, 0.71, -0.65, 0.105, '#090b11', '#584556', 0.022);
+  boneSegment(c, 0.55, -0.83, 0.87, -0.83, 0.038);
+  boneSegment(c, 0.71, -0.91, 0.71, -0.80, 0.040);
+  bossPolygon(c, [[0.60, -0.46], [0.71, -0.35], [0.82, -0.46]], '#8d795b', '#1a151b', 0.02);
+
+  ellipse(c, -0.42, -0.18, 0.27, 0.20, '#322737', '#6f4d40', 0.035, -0.30);
+  ellipse(c, 0.42, -0.18, 0.27, 0.20, '#322737', '#6f4d40', 0.035, 0.30);
+  boneSegment(c, -0.42, -0.12, -0.60, -0.01, 0.070);
+  boneHand(c, -0.67, -0.02, -0.40);
+  ellipse(c, 0.69, -0.02, 0.105, 0.13, '#afa38b', '#241c21', 0.025);
+  for (let i = 0; i < 3; i++) {
+    c.beginPath();
+    c.arc(0.70, -0.07 + i * 0.055, 0.095, -1.15, 1.10);
+    c.strokeStyle = '#c0b298';
+    c.lineWidth = 0.028;
+    c.stroke();
+  }
+
+  // 骨冠的尖刺是真正的骨段，而非字形。
+  for (const spike of [[-0.29, -0.69, -0.34, -0.99], [-0.15, -0.73, -0.17, -1.08],
+    [0, -0.74, 0, -1.15], [0.15, -0.73, 0.17, -1.08], [0.29, -0.69, 0.34, -0.99]]) {
+    boneSegment(c, spike[0], spike[1], spike[2], spike[3], 0.058);
+  }
+  c.beginPath();
+  c.arc(0, -0.67, 0.32, Math.PI * 1.05, Math.PI * 1.95);
+  c.strokeStyle = '#a38a60';
+  c.lineWidth = 0.065;
+  c.stroke();
+
+  gradient = c.createLinearGradient(-0.18, -0.72, 0.18, -0.15);
+  gradient.addColorStop(0, '#d0c2a4');
+  gradient.addColorStop(0.50, '#a99e87');
+  gradient.addColorStop(1, '#655f58');
+  c.beginPath();
+  c.moveTo(0, -0.75);
+  c.bezierCurveTo(-0.27, -0.76, -0.31, -0.54, -0.24, -0.32);
+  c.lineTo(-0.15, -0.16);
+  c.lineTo(-0.11, -0.06);
+  c.lineTo(0.11, -0.06);
+  c.lineTo(0.15, -0.16);
+  c.lineTo(0.24, -0.32);
+  c.bezierCurveTo(0.31, -0.54, 0.27, -0.76, 0, -0.75);
+  c.closePath();
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#241d21';
+  c.lineWidth = 0.04;
+  c.stroke();
+  ellipse(c, -0.105, -0.47, 0.073, 0.090, '#16131a', null, 0, -0.18);
+  ellipse(c, 0.105, -0.47, 0.073, 0.090, '#16131a', null, 0, 0.18);
+  bossPolygon(c, [[0, -0.37], [-0.044, -0.27], [0.044, -0.27]], '#30262a');
+  c.strokeStyle = '#4a3e38';
+  c.lineWidth = 0.014;
+  for (let i = -2; i <= 2; i++) {
+    c.beginPath();
+    c.moveTo(i * 0.042, -0.18);
+    c.lineTo(i * 0.042, -0.075);
+    c.stroke();
+  }
+  c.beginPath();
+  c.moveTo(-0.12, -0.14);
+  c.lineTo(0.12, -0.14);
+  c.stroke();
+}
+
+function paintBase(c, index) {
+  c.save();
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  switch (index) {
+    case 0: paintWatcher(c); break;
+    case 1: paintSpiderMother(c); break;
+    case 2: paintFacelessKing(c); break;
+    case 3: paintVoidWhale(c); break;
+    case 4: paintTimeDevourer(c); break;
+    case 5: paintBonePope(c); break;
+  }
+  c.restore();
+}
+
+function dynamicWatcher(c, t, danger) {
+  const pulse = 0.82 + Math.sin(t * 2.0) * 0.12 + danger * 0.18;
+  c.save();
+  c.globalAlpha *= pulse;
+  drawEye(c, 0, -0.17, 0.31, 0.125, '#e68a3c', 0.60);
+  c.globalCompositeOperation = 'lighter';
+  c.shadowColor = 'rgba(230,114,46,0.65)';
+  c.shadowBlur = 7;
+  strokeLines(c, WATCHER_FISSURES, '#dc7538', 0.010, 0.28 + pulse * 0.25);
+  c.restore();
+}
+
+function dynamicSpiderMother(c, t, danger) {
+  const pulse = 0.76 + Math.sin(t * 1.55 + 1.2) * 0.16 + danger * 0.15;
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  c.globalAlpha *= pulse;
+  glow(c, 0, 0.32, 0.62, 'rgba(113,75,126,0.24)');
+  glow(c, -0.03, 0.30, 0.38, 'rgba(80,137,132,0.15)');
+  const eyes = [[-0.19, -0.54, 0.036], [0.19, -0.54, 0.036], [-0.09, -0.43, 0.044],
+    [0.09, -0.43, 0.044], [-0.27, -0.40, 0.025], [0.27, -0.40, 0.025]];
+  glow(c, 0, -0.47, 0.43, 'rgba(215,102,48,0.18)');
+  for (let i = 0; i < eyes.length; i++) {
+    const eye = eyes[i];
+    circle(c, eye[0], eye[1], eye[2], i < 4 ? '#efad59' : '#a077a1');
+    circle(c, eye[0], eye[1], eye[2] * 0.38, '#fff0bd');
+  }
+  c.restore();
+}
+
+function dynamicFacelessKing(c, t, danger) {
+  const pulse = 0.75 + Math.sin(t * 1.7 + 2.1) * 0.15 + danger * 0.18;
+  c.save();
+  c.globalAlpha *= pulse;
+  c.globalCompositeOperation = 'lighter';
+  glow(c, 0.71, -0.66, 0.42, 'rgba(126,83,143,0.40)');
+  glow(c, 0.71, -0.66, 0.20, 'rgba(224,137,65,0.30)');
+  circle(c, 0.71, -0.66, 0.070, '#a77c87');
+  circle(c, 0.69, -0.68, 0.030, '#e5bb75');
+  glow(c, 0, 0.15, 0.32, 'rgba(220,127,52,0.28)');
+  bossPolygon(c, [[0, 0.055], [0.072, 0.15], [0, 0.245], [-0.072, 0.15]], '#d6934e');
+  c.strokeStyle = '#b28a62';
+  c.lineWidth = 0.015;
+  for (let i = 0; i < 3; i++) {
+    const start = t * 0.35 + i * BOSS_TAU / 3;
+    c.beginPath();
+    c.arc(0.71, -0.66, 0.145, start, start + 0.65);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function dynamicVoidWhale(c, t, danger) {
+  const pulse = 0.72 + Math.sin(t * 1.25 + 0.8) * 0.17 + danger * 0.16;
+  c.save();
+  const baseAlpha = c.globalAlpha;
+  c.globalAlpha *= pulse;
+  c.globalCompositeOperation = 'lighter';
+  glow(c, -0.43, 0.29, 0.55, 'rgba(197,83,43,0.26)');
+  glow(c, -0.33, 0.27, 0.30, 'rgba(119,70,125,0.25)');
+  const spots = [[-0.49, -0.40, 0.030], [-0.15, -0.46, 0.025], [0.16, -0.39, 0.033],
+    [0.48, -0.24, 0.026], [0.69, -0.10, 0.020], [-0.12, -0.18, 0.020], [0.29, -0.08, 0.020]];
+  for (let i = 0; i < spots.length; i++) {
+    const spot = spots[i];
+    c.globalAlpha = baseAlpha * pulse * (0.55 + Math.sin(t * 1.4 + i * 1.7) * 0.25);
+    star(c, spot[0], spot[1], spot[2], i % 3 ? '#91b1aa' : '#ae8ca9', i * 0.31);
+  }
+  c.globalAlpha = baseAlpha * pulse;
+  drawEye(c, -0.73, -0.23, 0.072, 0.038, '#80aaa1', 0.50);
+  c.restore();
+}
+
+function dynamicTimeDevourer(c, t, danger) {
+  c.save();
+  drawGear(c, -0.52, -0.40, 0.22, 12, t * 0.34, '#816042');
+  drawGear(c, 0.51, -0.37, 0.19, 10, -t * 0.43 + 0.3, '#96704a');
+  drawGear(c, 0.45, 0.46, 0.17, 9, t * 0.52 + 0.8, '#6f5945');
+
+  c.save();
+  c.rotate(t * 0.18);
+  bossPolygon(c, [[-0.025, 0.08], [-0.035, -0.39], [0, -0.49], [0.035, -0.39], [0.025, 0.08]],
+    '#b58a52', '#21161a', 0.015);
+  c.restore();
+  c.save();
+  c.rotate(-t * 0.075 + 1.1);
+  bossPolygon(c, [[-0.035, 0.06], [-0.045, -0.25], [0, -0.34], [0.045, -0.25], [0.035, 0.06]],
+    '#7e6360', '#21161a', 0.015);
+  c.restore();
+
+  const pulse = 0.78 + Math.sin(t * 2.3) * 0.14 + danger * 0.18;
+  c.globalAlpha *= pulse;
+  c.globalCompositeOperation = 'lighter';
+  glow(c, 0, 0, 0.40, 'rgba(218,125,50,0.32)');
+  circle(c, 0, 0, 0.075, '#d9a55d');
+  circle(c, -0.018, -0.020, 0.025, '#ffe1a0');
+  c.strokeStyle = '#788f8a';
+  c.lineWidth = 0.012;
+  c.beginPath();
+  c.arc(0, 0, 0.47, t * 0.22, t * 0.22 + 1.25);
+  c.stroke();
+  c.restore();
+}
+
+function dynamicBonePope(c, t, danger) {
+  const pulse = 0.73 + Math.sin(t * 1.8 + 2.8) * 0.16 + danger * 0.18;
+  c.save();
+  c.globalAlpha *= pulse;
+  c.globalCompositeOperation = 'lighter';
+  glow(c, 0, -0.47, 0.40, 'rgba(206,100,45,0.24)');
+  ellipse(c, -0.105, -0.47, 0.032, 0.048, '#d57b3e');
+  ellipse(c, 0.105, -0.47, 0.032, 0.048, '#d57b3e');
+  circle(c, -0.105, -0.48, 0.013, '#ffd18a');
+  circle(c, 0.105, -0.48, 0.013, '#ffd18a');
+  glow(c, 0.71, -0.65, 0.43, 'rgba(103,137,132,0.28)');
+  glow(c, 0.71, -0.65, 0.23, 'rgba(130,81,137,0.30)');
+  bossPolygon(c, [[0.71, -0.74], [0.79, -0.65], [0.71, -0.56], [0.63, -0.65]], '#aa875f');
+  circle(c, 0.71, -0.65, 0.037, '#c6b779');
+  c.strokeStyle = '#88705d';
+  c.lineWidth = 0.014;
+  for (let i = 0; i < 2; i++) {
+    const start = -t * 0.28 + i * Math.PI;
+    c.beginPath();
+    c.arc(0.71, -0.65, 0.23, start, start + 1.55);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function paintDynamic(c, index, time, danger) {
+  switch (index) {
+    case 0: dynamicWatcher(c, time, danger); break;
+    case 1: dynamicSpiderMother(c, time, danger); break;
+    case 2: dynamicFacelessKing(c, time, danger); break;
+    case 3: dynamicVoidWhale(c, time, danger); break;
+    case 4: dynamicTimeDevourer(c, time, danger); break;
+    case 5: dynamicBonePope(c, time, danger); break;
+  }
+}
+
+function paintEnrage(c, index, danger, time) {
+  if (danger <= 0) return;
+  const pulse = 0.5 + 0.5 * Math.sin(time * (4.2 + danger * 2.5) + index);
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  c.globalAlpha = danger * (0.34 + pulse * 0.20);
+  const gradient = c.createRadialGradient(0, 0, 0.35, 0, 0, 1.35);
+  gradient.addColorStop(0, 'rgba(139,45,23,0)');
+  gradient.addColorStop(0.64, 'rgba(184,65,27,0.18)');
+  gradient.addColorStop(0.84, 'rgba(218,94,34,0.26)');
+  gradient.addColorStop(1, 'rgba(108,38,28,0)');
+  c.fillStyle = gradient;
+  c.beginPath();
+  c.arc(0, 0, 1.35, 0, BOSS_TAU);
+  c.fill();
+  c.restore();
+
+  c.save();
+  c.globalAlpha = danger * (0.55 + pulse * 0.35);
+  c.shadowColor = 'rgba(231,100,39,0.72)';
+  c.shadowBlur = 8;
+  strokeLines(c, CRACKS[index], '#2a1113', 0.038, 0.85);
+  c.globalCompositeOperation = 'lighter';
+  strokeLines(c, CRACKS[index], '#e07b3c', 0.012, 0.92);
+  c.restore();
+}
+
+/**
+ * 绘制前六 Boss。调用方保留世界变换；本函数会完整恢复 context 状态。
+ * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} c
+ * @param {number} index 0～5
+ * @param {number} x Boss 中心世界坐标
+ * @param {number} y Boss 中心世界坐标
+ * @param {number} radius 碰撞半径
+ * @param {number} time 秒
+ * @param {{hpRatio:number, hitFlash:number, dead:boolean}} state
+ */
+function drawBossA(c, index, x, y, radius, time, state) {
+  if (!c || !Number.isFinite(radius) || radius <= 0) return;
+  const bossIndex = ((Math.floor(Number(index) || 0) % 6) + 6) % 6;
+  const data = state || {};
+  const dead = Boolean(data.dead);
+  const hpRatio = data.hpRatio == null ? 1 : bossClamp(data.hpRatio);
+  const hitFlash = dead ? 0 : bossClamp(data.hitFlash || 0);
+  const danger = dead ? 0 : bossClamp((0.38 - hpRatio) / 0.38);
+  const t = Number.isFinite(Number(time)) ? Number(time) : 0;
+  const phase = bossIndex * 1.37;
+  const breath = dead ? 1 : 1 + Math.sin(t * 1.08 + phase) * 0.018;
+  const bob = dead ? 0 : Math.sin(t * 0.82 + phase) * 0.014;
+  const sprite = bossSprites(bossIndex);
+
+  c.save();
+  c.translate(x, y + radius * bob);
+  c.scale(radius * breath, radius * breath);
+  if (bossIndex === 3 && !dead) c.rotate(Math.sin(t * 0.46) * 0.028);
+  c.globalAlpha = dead ? 0.36 : 1;
+  c.imageSmoothingEnabled = true;
+
+  if (sprite) {
+    c.drawImage(sprite.base, -SPRITE_EXTENT / 2, -SPRITE_EXTENT / 2, SPRITE_EXTENT, SPRITE_EXTENT);
+  } else {
+    paintBase(c, bossIndex);
+  }
+  paintEnrage(c, bossIndex, danger, t);
+
+  c.save();
+  if (dead) c.globalAlpha *= 0.10;
+  paintDynamic(c, bossIndex, t, danger);
+  c.restore();
+
+  if (hitFlash > 0) {
+    c.save();
+    c.globalAlpha = hitFlash * 0.90;
+    if (sprite) {
+      c.drawImage(sprite.white, -SPRITE_EXTENT / 2, -SPRITE_EXTENT / 2, SPRITE_EXTENT, SPRITE_EXTENT);
+    } else {
+      // 无离屏能力的极旧环境仍以几何轮廓闪白，不污染画布其他区域。
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.ellipse(0, 0, bossIndex === 3 ? 1.22 : 0.94, 1.05, 0, 0, BOSS_TAU);
+      c.fill();
+    }
+    c.restore();
+  }
+  c.restore();
+}
+
+// ── js/ui/boss-art-b.js ──
+// 「烬渊」后六 Boss 的独立 Canvas 2D 美术模块。
+// 坐标以碰撞半径为 1；静态轮廓离屏缓存，每帧只合成呼吸、核心与少量光效。
+
+const BOSS_B_TAU = Math.PI * 2;
+const BOSS_B_SPRITE_SIZE = 384;
+const BOSS_B_SPRITE_UNIT = 128;
+const BOSS_B_SPRITE_EXTENT = BOSS_B_SPRITE_SIZE / BOSS_B_SPRITE_UNIT;
+const bossB_spriteCache = new Array(6);
+
+const BOSS_B_CRACKS = [
+  [
+    [[-0.48, -0.48], [-0.30, -0.28], [-0.37, -0.08], [-0.18, 0.10]],
+    [[0.50, -0.40], [0.31, -0.20], [0.38, 0.03], [0.18, 0.24], [0.25, 0.47]],
+    [[-0.20, 0.44], [-0.08, 0.61], [-0.16, 0.82]],
+    [[0.77, 0.30], [0.94, 0.43], [0.86, 0.63], [1.05, 0.72]]
+  ],
+  [
+    [[-0.43, -0.42], [-0.26, -0.28], [-0.34, -0.08], [-0.16, 0.05]],
+    [[0.44, -0.30], [0.28, -0.14], [0.36, 0.08], [0.18, 0.25]],
+    [[-0.30, 0.39], [-0.12, 0.29], [0.02, 0.48], [0.19, 0.40]],
+    [[0.74, 0.65], [0.87, 0.82], [0.80, 1.02]]
+  ],
+  [
+    [[-0.19, -0.23], [-0.08, -0.05], [-0.17, 0.16], [-0.04, 0.32]],
+    [[-0.46, 0.30], [-0.29, 0.47], [-0.38, 0.69], [-0.19, 0.91]],
+    [[0.43, 0.22], [0.25, 0.43], [0.35, 0.66], [0.17, 0.86], [0.23, 1.05]]
+  ],
+  [
+    [[-0.54, -0.52], [-0.35, -0.32], [-0.44, -0.10], [-0.24, 0.08]],
+    [[0.48, -0.61], [0.30, -0.36], [0.40, -0.17], [0.21, 0.04]],
+    [[-0.46, 0.31], [-0.28, 0.43], [-0.35, 0.61]],
+    [[0.52, 0.23], [0.35, 0.42], [0.43, 0.62]]
+  ],
+  [
+    [[-0.51, -0.31], [-0.34, -0.20], [-0.42, -0.02]],
+    [[0.48, -0.34], [0.31, -0.19], [0.40, 0.01]],
+    [[-0.30, 0.39], [-0.16, 0.28], [-0.04, 0.45]],
+    [[0.29, 0.39], [0.15, 0.27], [0.04, 0.45]]
+  ],
+  [
+    [[-0.24, -0.42], [-0.10, -0.25], [-0.18, -0.04], [-0.03, 0.13]],
+    [[0.34, -0.29], [0.20, -0.10], [0.29, 0.10], [0.12, 0.28]],
+    [[-0.35, 0.39], [-0.19, 0.54], [-0.27, 0.76], [-0.09, 0.92]],
+    [[0.60, -0.75], [0.49, -0.54], [0.58, -0.36]]
+  ]
+];
+
+const BOSS_B_FLOATING_SHARDS = [
+  [-1.12, -0.66, 0.86, 0.2],
+  [1.10, -0.48, 0.72, 1.7],
+  [-1.18, 0.30, 0.62, 2.8],
+  [1.13, 0.50, 0.90, 4.1],
+  [0.64, -1.13, 0.54, 5.3]
+];
+
+function bossB_clamp(value, min = 0, max = 1) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : min;
+}
+
+function bossB_surface() {
+  let canvas = null;
+  if (typeof OffscreenCanvas !== 'undefined') {
+    try {
+      canvas = new OffscreenCanvas(BOSS_B_SPRITE_SIZE, BOSS_B_SPRITE_SIZE);
+    } catch {
+      canvas = null;
+    }
+  }
+  if (!canvas && typeof document !== 'undefined') {
+    canvas = document.createElement('canvas');
+    canvas.width = BOSS_B_SPRITE_SIZE;
+    canvas.height = BOSS_B_SPRITE_SIZE;
+  }
+  return canvas;
+}
+
+function bossB_polygon(c, points, fill, stroke, width = 0.025) {
+  c.beginPath();
+  c.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
+  c.closePath();
+  if (fill) {
+    c.fillStyle = fill;
+    c.fill();
+  }
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = width;
+    c.stroke();
+  }
+}
+
+function bossB_slab(c, points, fill, edge, width = 0.025, outer = 0.075) {
+  bossB_polygon(c, points, fill, '#08090e', outer);
+  bossB_polygon(c, points, null, edge, width);
+}
+
+function bossB_circle(c, x, y, radius, fill, stroke, width = 0.025) {
+  c.beginPath();
+  c.arc(x, y, radius, 0, BOSS_B_TAU);
+  if (fill) {
+    c.fillStyle = fill;
+    c.fill();
+  }
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = width;
+    c.stroke();
+  }
+}
+
+function bossB_ellipse(c, x, y, rx, ry, fill, stroke, width = 0.025, rotation = 0) {
+  c.beginPath();
+  c.ellipse(x, y, rx, ry, rotation, 0, BOSS_B_TAU);
+  if (fill) {
+    c.fillStyle = fill;
+    c.fill();
+  }
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = width;
+    c.stroke();
+  }
+}
+
+function bossB_glow(c, x, y, radius, inner, outer = 'rgba(0,0,0,0)') {
+  const gradient = c.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, inner);
+  gradient.addColorStop(1, outer);
+  c.fillStyle = gradient;
+  c.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+function bossB_lines(c, lines, color, width, alpha = 1) {
+  c.save();
+  c.globalAlpha *= alpha;
+  c.strokeStyle = color;
+  c.lineWidth = width;
+  for (const line of lines) {
+    c.beginPath();
+    c.moveTo(line[0][0], line[0][1]);
+    for (let i = 1; i < line.length; i++) c.lineTo(line[i][0], line[i][1]);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function bossB_limb(c, points, width, color, highlight = '#786072') {
+  c.beginPath();
+  c.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
+  c.strokeStyle = '#08090e';
+  c.lineWidth = width + 0.075;
+  c.stroke();
+  c.strokeStyle = color;
+  c.lineWidth = width;
+  c.stroke();
+  c.strokeStyle = highlight;
+  c.lineWidth = Math.max(0.012, width * 0.18);
+  c.stroke();
+}
+
+function bossB_tentacle(c, values, width, color, highlight) {
+  c.beginPath();
+  c.moveTo(values[0], values[1]);
+  c.bezierCurveTo(values[2], values[3], values[4], values[5], values[6], values[7]);
+  c.strokeStyle = '#07080d';
+  c.lineWidth = width + 0.085;
+  c.stroke();
+  c.strokeStyle = color;
+  c.lineWidth = width;
+  c.stroke();
+  c.strokeStyle = highlight;
+  c.lineWidth = 0.022;
+  c.stroke();
+}
+
+function bossB_almondPath(c, x, y, halfWidth, halfHeight) {
+  c.beginPath();
+  c.moveTo(x - halfWidth, y);
+  c.bezierCurveTo(x - halfWidth * 0.46, y - halfHeight * 1.25,
+    x + halfWidth * 0.46, y - halfHeight * 1.25, x + halfWidth, y);
+  c.bezierCurveTo(x + halfWidth * 0.46, y + halfHeight * 1.25,
+    x - halfWidth * 0.46, y + halfHeight * 1.25, x - halfWidth, y);
+  c.closePath();
+}
+
+function bossB_eye(c, x, y, halfWidth, halfHeight, color, rotation = 0) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(rotation);
+  c.globalCompositeOperation = 'lighter';
+  bossB_glow(c, 0, 0, halfWidth * 2.0, color);
+  c.globalCompositeOperation = 'source-over';
+  const gradient = c.createRadialGradient(0, 0, 0, 0, 0, halfWidth);
+  gradient.addColorStop(0, '#fff0b0');
+  gradient.addColorStop(0.32, color);
+  gradient.addColorStop(1, '#67273a');
+  bossB_almondPath(c, 0, 0, halfWidth, halfHeight);
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#2a1724';
+  c.lineWidth = 0.018;
+  c.stroke();
+  bossB_ellipse(c, 0, 0, halfWidth * 0.15, halfHeight * 0.86, '#090a10');
+  bossB_circle(c, -halfWidth * 0.16, -halfHeight * 0.28, halfHeight * 0.15, '#fff3ca');
+  c.restore();
+}
+
+function bossB_gearPath(c, root, outer, teeth) {
+  c.beginPath();
+  for (let i = 0; i < teeth * 4; i++) {
+    const angle = i * BOSS_B_TAU / (teeth * 4);
+    const radius = i % 4 === 1 || i % 4 === 2 ? outer : root;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (i === 0) c.moveTo(x, y);
+    else c.lineTo(x, y);
+  }
+  c.closePath();
+}
+
+function bossB_flamePath(c, x, y, width, height, lean = 0) {
+  c.beginPath();
+  c.moveTo(x, y);
+  c.bezierCurveTo(x - width * 0.72, y - height * 0.25,
+    x - width * 0.42 + lean, y - height * 0.60, x + lean, y - height);
+  c.bezierCurveTo(x + width * 0.18 + lean, y - height * 0.63,
+    x + width * 0.75, y - height * 0.42, x, y);
+  c.closePath();
+}
+
+function bossB_crescent(c, x, y, radius, fill, stroke) {
+  c.beginPath();
+  c.moveTo(x + radius * 0.42, y - radius * 0.90);
+  c.bezierCurveTo(x - radius * 0.95, y - radius * 0.72,
+    x - radius * 0.95, y + radius * 0.72, x + radius * 0.42, y + radius * 0.90);
+  c.bezierCurveTo(x - radius * 0.20, y + radius * 0.45,
+    x - radius * 0.20, y - radius * 0.45, x + radius * 0.42, y - radius * 0.90);
+  c.closePath();
+  c.fillStyle = fill;
+  c.fill();
+  if (stroke) {
+    c.strokeStyle = stroke;
+    c.lineWidth = 0.018;
+    c.stroke();
+  }
+}
+
+function bossB_getSprites(index) {
+  if (bossB_spriteCache[index] !== undefined) return bossB_spriteCache[index];
+  const base = bossB_surface();
+  const baseContext = base && base.getContext('2d', { alpha: true });
+  if (!baseContext) {
+    bossB_spriteCache[index] = null;
+    return null;
+  }
+
+  baseContext.translate(BOSS_B_SPRITE_SIZE / 2, BOSS_B_SPRITE_SIZE / 2);
+  baseContext.scale(BOSS_B_SPRITE_UNIT, BOSS_B_SPRITE_UNIT);
+  baseContext.lineCap = 'round';
+  baseContext.lineJoin = 'round';
+  bossB_paintBase(baseContext, index);
+
+  const white = bossB_surface();
+  const whiteContext = white && white.getContext('2d', { alpha: true });
+  if (whiteContext) {
+    whiteContext.drawImage(base, 0, 0);
+    whiteContext.globalCompositeOperation = 'source-in';
+    whiteContext.fillStyle = '#ffffff';
+    whiteContext.fillRect(0, 0, BOSS_B_SPRITE_SIZE, BOSS_B_SPRITE_SIZE);
+  }
+
+  bossB_spriteCache[index] = { base, white: whiteContext ? white : base };
+  return bossB_spriteCache[index];
+}
+
+// 0：熔心巨像——玄武岩躯干、熔岩胸腔与两只巨型岩拳。
+function bossB_paintColossus(c) {
+  for (const side of [-1, 1]) {
+    c.save();
+    c.scale(side, 1);
+    bossB_slab(c, [[0.43, -0.57], [0.76, -0.58], [1.02, -0.22], [1.04, 0.35],
+      [0.79, 0.55], [0.55, 0.18]], '#29252b', '#806056', 0.028, 0.10);
+    bossB_slab(c, [[0.70, 0.16], [1.06, 0.10], [1.27, 0.31], [1.25, 0.68],
+      [1.05, 0.91], [0.75, 0.82], [0.62, 0.52]], '#342c30', '#9a6b55', 0.030, 0.09);
+    bossB_slab(c, [[0.76, 0.25], [1.04, 0.20], [1.15, 0.34], [1.10, 0.49],
+      [0.79, 0.46]], '#514044', '#796068', 0.018, 0.035);
+    for (let i = 0; i < 3; i++) {
+      const x = 0.77 + i * 0.14;
+      bossB_slab(c, [[x, 0.51], [x + 0.12, 0.49], [x + 0.14, 0.72],
+        [x + 0.04, 0.79], [x - 0.03, 0.69]], '#40353a', '#78544c', 0.014, 0.025);
+    }
+    bossB_slab(c, [[0.50, -0.68], [0.77, -0.78], [0.94, -0.53], [0.77, -0.31],
+      [0.50, -0.35]], '#473a3e', '#8d6a5d', 0.026, 0.065);
+    c.restore();
+  }
+
+  const torso = [[-0.59, -0.63], [-0.30, -0.82], [0.30, -0.82], [0.59, -0.63],
+    [0.67, -0.12], [0.53, 0.52], [0.35, 0.96], [-0.35, 0.96], [-0.53, 0.52], [-0.67, -0.12]];
+  const gradient = c.createLinearGradient(-0.45, -0.75, 0.45, 0.95);
+  gradient.addColorStop(0, '#4a3c40');
+  gradient.addColorStop(0.42, '#2d282e');
+  gradient.addColorStop(1, '#17171d');
+  bossB_slab(c, torso, gradient, '#956652', 0.032, 0.11);
+
+  bossB_slab(c, [[-0.48, -0.54], [-0.19, -0.66], [-0.08, -0.35], [-0.34, -0.19],
+    [-0.55, -0.27]], '#504247', '#79636a', 0.021, 0.040);
+  bossB_slab(c, [[0.48, -0.54], [0.19, -0.66], [0.08, -0.35], [0.34, -0.19],
+    [0.55, -0.27]], '#453a41', '#79636a', 0.021, 0.040);
+  bossB_slab(c, [[-0.45, 0.35], [-0.18, 0.31], [-0.10, 0.79], [-0.34, 0.86]],
+    '#383138', '#6f5350', 0.020, 0.040);
+  bossB_slab(c, [[0.45, 0.35], [0.18, 0.31], [0.10, 0.79], [0.34, 0.86]],
+    '#332d35', '#6f5350', 0.020, 0.040);
+
+  bossB_slab(c, [[-0.30, -0.91], [-0.20, -1.10], [0.20, -1.10], [0.31, -0.91],
+    [0.23, -0.68], [-0.23, -0.68]], '#3b3136', '#9a705d', 0.027, 0.075);
+  bossB_slab(c, [[-0.23, -0.94], [0.23, -0.94], [0.18, -0.83], [-0.18, -0.83]],
+    '#100f15', '#74515a', 0.018, 0.025);
+
+  const core = [[-0.34, -0.24], [0, -0.42], [0.34, -0.24], [0.39, 0.10],
+    [0, 0.43], [-0.39, 0.10]];
+  bossB_slab(c, core, '#100d13', '#b0754f', 0.038, 0.065);
+  bossB_polygon(c, [[-0.23, -0.18], [0, -0.30], [0.23, -0.18], [0.27, 0.07],
+    [0, 0.30], [-0.27, 0.07]], '#241118', '#613a3d', 0.020);
+
+  c.strokeStyle = '#a0583d';
+  c.lineWidth = 0.015;
+  c.beginPath();
+  c.moveTo(-0.51, -0.13);
+  c.lineTo(-0.37, -0.03);
+  c.lineTo(-0.43, 0.16);
+  c.moveTo(0.50, -0.15);
+  c.lineTo(0.38, -0.03);
+  c.lineTo(0.45, 0.14);
+  c.moveTo(-0.12, 0.48);
+  c.lineTo(0, 0.62);
+  c.lineTo(0.11, 0.49);
+  c.stroke();
+  for (const point of [[-0.48, -0.55], [0.48, -0.55], [-0.39, 0.68], [0.39, 0.68]]) {
+    bossB_circle(c, point[0], point[1], 0.035, '#a07858', '#21181d', 0.015);
+  }
+}
+
+// 1：千眼之魇——触须球体、环绕眼球与中央竖瞳。
+function bossB_paintThousandEyes(c) {
+  const tentacles = [
+    [0.35, 0.43, 0.76, 0.72, 0.68, 1.22, 1.10, 1.29],
+    [0.54, 0.13, 0.98, 0.30, 1.13, 0.75, 1.34, 0.53],
+    [0.47, -0.25, 0.91, -0.23, 1.10, -0.63, 1.29, -0.43],
+    [0.18, 0.57, 0.28, 1.01, -0.11, 1.19, 0.20, 1.39]
+  ];
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < tentacles.length; i++) {
+      const source = tentacles[i];
+      const values = source.slice();
+      for (let p = 0; p < values.length; p += 2) values[p] *= side;
+      bossB_tentacle(c, values, i === 3 ? 0.11 : 0.13,
+        i % 2 ? '#372a45' : '#403047', i % 2 ? '#607f89' : '#806087');
+      bossB_circle(c, values[6], values[7], 0.055, '#62445f', '#0a0910', 0.025);
+    }
+  }
+
+  const gradient = c.createRadialGradient(-0.20, -0.26, 0.08, 0, 0, 0.77);
+  gradient.addColorStop(0, '#62456b');
+  gradient.addColorStop(0.45, '#3d2d4c');
+  gradient.addColorStop(1, '#171522');
+  bossB_circle(c, 0, 0, 0.73, gradient, '#08090f', 0.105);
+  bossB_circle(c, 0, 0, 0.70, null, '#966d91', 0.025);
+
+  c.strokeStyle = '#675070';
+  c.lineWidth = 0.022;
+  for (const radius of [0.43, 0.57]) {
+    c.beginPath();
+    c.arc(0, 0, radius, Math.PI * 0.10, Math.PI * 0.90);
+    c.stroke();
+    c.beginPath();
+    c.arc(0, 0, radius, Math.PI * 1.10, Math.PI * 1.90);
+    c.stroke();
+  }
+
+  bossB_circle(c, 0, 0, 0.89, null, '#090a10', 0.15);
+  bossB_circle(c, 0, 0, 0.89, null, '#725779', 0.072);
+  bossB_circle(c, 0, 0, 0.89, null, '#8da0a5', 0.018);
+  for (let i = 0; i < 10; i++) {
+    const angle = -Math.PI / 2 + i * BOSS_B_TAU / 10;
+    c.save();
+    c.translate(Math.cos(angle) * 0.89, Math.sin(angle) * 0.89);
+    c.rotate(angle + Math.PI / 2);
+    bossB_almondPath(c, 0, 0, 0.105, 0.060);
+    c.fillStyle = '#17121e';
+    c.fill();
+    c.strokeStyle = i % 2 ? '#aa7786' : '#7699a2';
+    c.lineWidth = 0.018;
+    c.stroke();
+    c.restore();
+  }
+
+  const smallEyes = [[-0.40, -0.28, 0.070], [0.40, -0.28, 0.070],
+    [-0.45, 0.18, 0.062], [0.45, 0.18, 0.062], [-0.22, 0.43, 0.055], [0.22, 0.43, 0.055]];
+  for (const eye of smallEyes) {
+    bossB_ellipse(c, eye[0], eye[1], eye[2] * 1.35, eye[2], '#100e17', '#85617f', 0.018);
+  }
+  bossB_almondPath(c, 0, -0.06, 0.34, 0.20);
+  c.fillStyle = '#0b0b12';
+  c.fill();
+  c.strokeStyle = '#ae765f';
+  c.lineWidth = 0.040;
+  c.stroke();
+  bossB_almondPath(c, 0, -0.06, 0.29, 0.155);
+  c.strokeStyle = '#665279';
+  c.lineWidth = 0.018;
+  c.stroke();
+}
+
+// 2：永夜舞者——月环、舒展双臂与多层长裙。
+function bossB_paintNightDancer(c) {
+  bossB_circle(c, 0, -0.18, 1.05, null, '#090a11', 0.14);
+  const moonGradient = c.createLinearGradient(-1, -1, 1, 1);
+  moonGradient.addColorStop(0, '#8ba7b5');
+  moonGradient.addColorStop(0.48, '#8c729e');
+  moonGradient.addColorStop(1, '#b98a66');
+  bossB_circle(c, 0, -0.18, 1.05, null, moonGradient, 0.048);
+  for (let i = 0; i < 12; i++) {
+    const angle = i * BOSS_B_TAU / 12;
+    const x = Math.cos(angle) * 1.05;
+    const y = -0.18 + Math.sin(angle) * 1.05;
+    bossB_circle(c, x, y, i % 3 === 0 ? 0.045 : 0.026,
+      i % 3 === 0 ? '#c2a677' : '#7796a5', '#17121e', 0.012);
+  }
+  bossB_crescent(c, 0, -1.20, 0.19, '#b9bad0', '#51445f');
+
+  for (const side of [-1, 1]) {
+    const arm = [side * 0.25, -0.40, side * 0.58, -0.54,
+      side * 0.73, -0.10, side * 1.10, -0.23];
+    bossB_tentacle(c, arm, 0.095, '#3b304d', '#9381a6');
+    bossB_ellipse(c, side * 1.11, -0.23, 0.09, 0.065, '#91849d', '#251b31', 0.022, side * 0.25);
+    c.strokeStyle = '#b0a2b5';
+    c.lineWidth = 0.016;
+    for (let i = 0; i < 3; i++) {
+      c.beginPath();
+      c.moveTo(side * (1.13 + i * 0.018), -0.25 + i * 0.025);
+      c.lineTo(side * (1.23 + i * 0.016), -0.30 + i * 0.045);
+      c.stroke();
+    }
+  }
+
+  const dressGradient = c.createLinearGradient(-0.50, -0.30, 0.45, 1.20);
+  dressGradient.addColorStop(0, '#4b3b61');
+  dressGradient.addColorStop(0.45, '#29243e');
+  dressGradient.addColorStop(1, '#151726');
+  c.beginPath();
+  c.moveTo(-0.27, -0.34);
+  c.bezierCurveTo(-0.40, 0.04, -0.42, 0.38, -0.78, 1.04);
+  c.lineTo(-0.51, 0.93);
+  c.lineTo(-0.28, 1.18);
+  c.lineTo(0, 1.02);
+  c.lineTo(0.28, 1.18);
+  c.lineTo(0.51, 0.93);
+  c.lineTo(0.78, 1.04);
+  c.bezierCurveTo(0.42, 0.38, 0.40, 0.04, 0.27, -0.34);
+  c.closePath();
+  c.fillStyle = dressGradient;
+  c.fill();
+  c.strokeStyle = '#080a11';
+  c.lineWidth = 0.095;
+  c.stroke();
+  c.strokeStyle = '#8c739e';
+  c.lineWidth = 0.027;
+  c.stroke();
+
+  const panelGradient = c.createLinearGradient(0, -0.15, 0, 1.05);
+  panelGradient.addColorStop(0, '#564367');
+  panelGradient.addColorStop(1, '#20243a');
+  bossB_slab(c, [[-0.17, -0.12], [0, -0.23], [0.17, -0.12], [0.30, 0.91],
+    [0, 1.02], [-0.30, 0.91]], panelGradient, '#748b9e', 0.020, 0.035);
+  c.strokeStyle = '#a0838e';
+  c.lineWidth = 0.018;
+  c.beginPath();
+  c.moveTo(-0.30, 0.05);
+  c.quadraticCurveTo(-0.19, 0.51, -0.47, 0.94);
+  c.moveTo(0.30, 0.05);
+  c.quadraticCurveTo(0.19, 0.51, 0.47, 0.94);
+  c.moveTo(-0.58, 0.76);
+  c.quadraticCurveTo(0, 0.96, 0.58, 0.76);
+  c.stroke();
+
+  bossB_slab(c, [[-0.29, -0.46], [0, -0.58], [0.29, -0.46], [0.20, -0.12],
+    [0, 0.01], [-0.20, -0.12]], '#49344f', '#b08370', 0.025, 0.055);
+  bossB_polygon(c, [[0, -0.36], [0.11, -0.22], [0, -0.07], [-0.11, -0.22]],
+    '#10101b', '#7b879d', 0.022);
+
+  bossB_ellipse(c, 0, -0.69, 0.22, 0.27, '#242235', '#090a11', 0.065);
+  const faceGradient = c.createLinearGradient(-0.15, -0.88, 0.15, -0.45);
+  faceGradient.addColorStop(0, '#b5a9bb');
+  faceGradient.addColorStop(0.55, '#7f778e');
+  faceGradient.addColorStop(1, '#46445a');
+  bossB_ellipse(c, 0, -0.68, 0.16, 0.22, faceGradient, '#9a80a0', 0.018);
+  bossB_almondPath(c, -0.070, -0.70, 0.052, 0.027);
+  c.fillStyle = '#11111b';
+  c.fill();
+  bossB_almondPath(c, 0.070, -0.70, 0.052, 0.027);
+  c.fill();
+  c.strokeStyle = '#5d526d';
+  c.lineWidth = 0.014;
+  c.beginPath();
+  c.moveTo(0, -0.66);
+  c.lineTo(-0.025, -0.57);
+  c.lineTo(0.035, -0.56);
+  c.stroke();
+  for (const side of [-1, 1]) {
+    bossB_slab(c, [[side * 0.08, -0.88], [side * 0.24, -1.04], [side * 0.20, -0.80]],
+      '#4d3d61', '#8c94ab', 0.018, 0.035);
+  }
+}
+
+// 3：裂界者——断裂晶簇、纵向空间裂缝与悬浮碎片。
+function bossB_paintRiftbreaker(c) {
+  const rearGradient = c.createLinearGradient(0, -1.20, 0, 0.80);
+  rearGradient.addColorStop(0, '#4e526d');
+  rearGradient.addColorStop(0.45, '#332c50');
+  rearGradient.addColorStop(1, '#191a2c');
+  bossB_slab(c, [[0, -1.23], [0.30, -0.72], [0.22, -0.31], [-0.05, -0.16], [-0.26, -0.66]],
+    rearGradient, '#8197ae', 0.026, 0.075);
+
+  bossB_slab(c, [[-0.10, -0.82], [-0.48, -0.72], [-0.80, -0.25], [-0.66, 0.30],
+    [-0.24, 0.67], [-0.07, 0.22]], '#373049', '#9278aa', 0.030, 0.095);
+  bossB_slab(c, [[0.10, -0.82], [0.48, -0.72], [0.80, -0.25], [0.66, 0.30],
+    [0.24, 0.67], [0.07, 0.22]], '#303149', '#718fa5', 0.030, 0.095);
+  bossB_slab(c, [[-0.52, -0.60], [-0.25, -0.55], [-0.20, -0.19], [-0.60, -0.10], [-0.69, -0.30]],
+    '#544464', '#a27fa7', 0.018, 0.035);
+  bossB_slab(c, [[0.52, -0.60], [0.25, -0.55], [0.20, -0.19], [0.60, -0.10], [0.69, -0.30]],
+    '#41465e', '#78a3af', 0.018, 0.035);
+  bossB_slab(c, [[-0.60, 0.02], [-0.23, 0.05], [-0.19, 0.42], [-0.43, 0.51]],
+    '#40354e', '#84668e', 0.018, 0.035);
+  bossB_slab(c, [[0.60, 0.02], [0.23, 0.05], [0.19, 0.42], [0.43, 0.51]],
+    '#343b51', '#6d8fa3', 0.018, 0.035);
+
+  for (const side of [-1, 1]) {
+    bossB_slab(c, [[side * 0.62, -0.35], [side * 1.02, -0.53], [side * 0.89, -0.13],
+      [side * 0.68, 0.01]], '#2b2b42', '#7d7799', 0.022, 0.060);
+    bossB_slab(c, [[side * 0.35, 0.46], [side * 0.57, 0.76], [side * 0.31, 1.08],
+      [side * 0.10, 0.67]], '#292b40', '#6e839b', 0.022, 0.055);
+  }
+
+  const rift = [[0.01, -0.93], [-0.07, -0.65], [0.055, -0.39], [-0.06, -0.12],
+    [0.065, 0.14], [-0.045, 0.43], [0.025, 0.79]];
+  bossB_lines(c, [rift], '#080911', 0.25);
+  bossB_lines(c, [rift], '#714b91', 0.14);
+  bossB_lines(c, [rift], '#10101d', 0.085);
+  bossB_lines(c, [rift], '#7298aa', 0.015, 0.72);
+
+  const fractures = [
+    [[-0.06, -0.39], [-0.32, -0.31], [-0.48, -0.40]],
+    [[0.04, -0.12], [0.30, -0.02], [0.48, -0.13]],
+    [[-0.03, 0.43], [-0.28, 0.34], [-0.44, 0.46]],
+    [[0.01, -0.65], [0.25, -0.76], [0.38, -0.68]]
+  ];
+  bossB_lines(c, fractures, '#171321', 0.065);
+  bossB_lines(c, fractures, '#8b6ba2', 0.017);
+  for (const point of [[-0.52, -0.51], [0.48, -0.47], [-0.42, 0.21], [0.39, 0.25]]) {
+    bossB_circle(c, point[0], point[1], 0.030, '#9b88af', '#1a1422', 0.012);
+  }
+}
+
+// 4：终末回响——多重音波环、空腔共鸣器与残响飘带。
+function bossB_paintFinalEcho(c) {
+  c.save();
+  c.lineCap = 'round';
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      c.beginPath();
+      c.moveTo(side * (0.28 + i * 0.10), 0.36);
+      c.bezierCurveTo(side * (0.48 + i * 0.12), 0.72,
+        side * (0.18 + i * 0.17), 1.02, side * (0.42 + i * 0.17), 1.29);
+      c.strokeStyle = '#090a11';
+      c.lineWidth = 0.09 - i * 0.012;
+      c.stroke();
+      c.strokeStyle = i % 2 ? '#536d82' : '#655276';
+      c.lineWidth = 0.040 - i * 0.006;
+      c.stroke();
+    }
+  }
+
+  const ringColors = ['#8d6c80', '#6e8f9c', '#a0785e'];
+  const radii = [0.79, 1.02, 1.25];
+  for (let ring = 0; ring < radii.length; ring++) {
+    for (let segment = 0; segment < 3; segment++) {
+      const start = segment * BOSS_B_TAU / 3 + ring * 0.31 + 0.12;
+      const end = start + 1.45 - ring * 0.10;
+      c.beginPath();
+      c.arc(0, 0, radii[ring], start, end);
+      c.strokeStyle = '#080a10';
+      c.lineWidth = 0.10 - ring * 0.014;
+      c.stroke();
+      c.strokeStyle = ringColors[ring];
+      c.lineWidth = 0.037 - ring * 0.005;
+      c.stroke();
+    }
+  }
+  c.restore();
+
+  for (let i = 0; i < 8; i++) {
+    c.save();
+    c.rotate(i * BOSS_B_TAU / 8);
+    bossB_slab(c, [[0.38, -0.11], [0.65, -0.17], [0.78, 0], [0.65, 0.17], [0.38, 0.11]],
+      i % 2 ? '#343244' : '#413344', i % 2 ? '#7795a2' : '#987783', 0.018, 0.045);
+    c.restore();
+  }
+
+  bossB_gearPath(c, 0.51, 0.60, 16);
+  const gradient = c.createRadialGradient(-0.15, -0.18, 0.05, 0, 0, 0.62);
+  gradient.addColorStop(0, '#544553');
+  gradient.addColorStop(0.55, '#302c3b');
+  gradient.addColorStop(1, '#171923');
+  c.fillStyle = gradient;
+  c.fill();
+  c.strokeStyle = '#08090f';
+  c.lineWidth = 0.075;
+  c.stroke();
+  c.strokeStyle = '#927787';
+  c.lineWidth = 0.024;
+  c.stroke();
+  bossB_circle(c, 0, 0, 0.43, '#1a1a25', '#6b8090', 0.025);
+  bossB_circle(c, 0, 0, 0.34, '#03050a', '#090a10', 0.075);
+  bossB_circle(c, 0, 0, 0.34, null, '#a07768', 0.025);
+  bossB_circle(c, 0, 0, 0.265, '#020409', '#385466', 0.016);
+  for (let i = 0; i < 8; i++) {
+    const angle = i * BOSS_B_TAU / 8;
+    bossB_circle(c, Math.cos(angle) * 0.49, Math.sin(angle) * 0.49, 0.026,
+      i % 2 ? '#94a5aa' : '#bd8c68', '#16131c', 0.010);
+  }
+}
+
+// 5：万烬之主——火焰王座、六臂君王与尖焰冠冕。
+function bossB_paintAshLord(c) {
+  const throneGradient = c.createLinearGradient(0, -1.30, 0, 1.10);
+  throneGradient.addColorStop(0, '#59352f');
+  throneGradient.addColorStop(0.42, '#36232a');
+  throneGradient.addColorStop(1, '#191820');
+  const throne = [[-0.73, 1.06], [-0.82, -0.35], [-0.67, -0.85], [-0.44, -0.72],
+    [-0.32, -1.17], [-0.13, -0.89], [0, -1.34], [0.14, -0.89], [0.33, -1.18],
+    [0.44, -0.72], [0.67, -0.86], [0.82, -0.35], [0.73, 1.06]];
+  bossB_slab(c, throne, throneGradient, '#a76b49', 0.032, 0.11);
+  c.beginPath();
+  c.moveTo(-0.51, 0.62);
+  c.lineTo(-0.56, -0.31);
+  c.quadraticCurveTo(-0.43, -0.75, 0, -0.87);
+  c.quadraticCurveTo(0.43, -0.75, 0.56, -0.31);
+  c.lineTo(0.51, 0.62);
+  c.closePath();
+  c.fillStyle = '#241b27';
+  c.fill();
+  c.strokeStyle = '#765062';
+  c.lineWidth = 0.028;
+  c.stroke();
+  for (const side of [-1, 1]) {
+    bossB_slab(c, [[side * 0.46, 0.30], [side * 0.91, 0.25], [side * 0.95, 0.52],
+      [side * 0.48, 0.62]], '#423039', '#a47355', 0.025, 0.065);
+    bossB_slab(c, [[side * 0.52, 0.68], [side * 0.78, 0.72], [side * 0.72, 1.10],
+      [side * 0.45, 1.10]], '#2e2930', '#80604f', 0.022, 0.050);
+  }
+  bossB_slab(c, [[-0.62, 0.73], [0.62, 0.73], [0.72, 1.04], [-0.72, 1.04]],
+    '#393037', '#9a7052', 0.025, 0.065);
+  bossB_slab(c, [[-0.78, 1.04], [0.78, 1.04], [0.70, 1.22], [-0.70, 1.22]],
+    '#27252c', '#735b50', 0.022, 0.055);
+
+  const arms = [
+    [[0.25, -0.42], [0.57, -0.68], [0.87, -0.93]],
+    [[0.31, -0.17], [0.72, -0.23], [1.10, -0.08]],
+    [[0.27, 0.08], [0.64, 0.27], [0.94, 0.54]]
+  ];
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < arms.length; i++) {
+      const points = arms[i].map(point => [point[0] * side, point[1]]);
+      bossB_limb(c, points, 0.085, i % 2 ? '#49313c' : '#51343b', '#a17467');
+      bossB_circle(c, points[1][0], points[1][1], 0.070, '#5d3d42', '#160f16', 0.025);
+      const hand = points[2];
+      bossB_ellipse(c, hand[0], hand[1], 0.085, 0.065, '#81544d', '#21141a', 0.020, side * 0.25);
+      c.strokeStyle = '#b8896b';
+      c.lineWidth = 0.017;
+      for (let finger = 0; finger < 3; finger++) {
+        c.beginPath();
+        c.moveTo(hand[0] + side * finger * 0.018, hand[1] - 0.025 + finger * 0.026);
+        c.lineTo(hand[0] + side * (0.11 + finger * 0.015), hand[1] - 0.07 + finger * 0.045);
+        c.stroke();
+      }
+    }
+  }
+
+  const bodyGradient = c.createLinearGradient(0, -0.55, 0, 0.90);
+  bodyGradient.addColorStop(0, '#593844');
+  bodyGradient.addColorStop(0.5, '#332532');
+  bodyGradient.addColorStop(1, '#1c1b26');
+  bossB_slab(c, [[-0.30, -0.50], [0, -0.62], [0.30, -0.50], [0.37, 0.15],
+    [0.29, 0.76], [0, 0.91], [-0.29, 0.76], [-0.37, 0.15]], bodyGradient, '#ad7557', 0.028, 0.075);
+  bossB_slab(c, [[-0.24, -0.35], [0, -0.47], [0.24, -0.35], [0.19, 0.06],
+    [0, 0.20], [-0.19, 0.06]], '#412932', '#7f6170', 0.020, 0.035);
+  bossB_polygon(c, [[0, -0.24], [0.16, -0.06], [0, 0.18], [-0.16, -0.06]],
+    '#110d13', '#b3764e', 0.028);
+  c.strokeStyle = '#8f674e';
+  c.lineWidth = 0.020;
+  c.beginPath();
+  c.moveTo(0, 0.23);
+  c.lineTo(0, 0.80);
+  c.moveTo(-0.25, 0.43);
+  c.quadraticCurveTo(0, 0.55, 0.25, 0.43);
+  c.stroke();
+
+  bossB_ellipse(c, 0, -0.68, 0.23, 0.25, '#3d2933', '#090a0f', 0.065);
+  bossB_ellipse(c, 0, -0.68, 0.17, 0.20, '#6b4547', '#a5745c', 0.020);
+  bossB_almondPath(c, -0.075, -0.70, 0.058, 0.030);
+  c.fillStyle = '#110d12';
+  c.fill();
+  bossB_almondPath(c, 0.075, -0.70, 0.058, 0.030);
+  c.fill();
+  bossB_slab(c, [[-0.27, -0.82], [-0.31, -1.12], [-0.15, -0.98], [0, -1.25],
+    [0.15, -0.98], [0.31, -1.12], [0.27, -0.82]], '#8c5b37', '#e0aa61', 0.024, 0.045);
+  bossB_slab(c, [[-0.28, -0.88], [0.28, -0.88], [0.24, -0.76], [-0.24, -0.76]],
+    '#b17a43', '#e0b872', 0.018, 0.025);
+  for (const x of [-0.18, 0, 0.18]) {
+    bossB_circle(c, x, -0.85, 0.030, x === 0 ? '#9d71a5' : '#6d9aa0', '#2a1820', 0.010);
+  }
+}
+
+function bossB_paintBase(c, index) {
+  c.save();
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  switch (index) {
+    case 0: bossB_paintColossus(c); break;
+    case 1: bossB_paintThousandEyes(c); break;
+    case 2: bossB_paintNightDancer(c); break;
+    case 3: bossB_paintRiftbreaker(c); break;
+    case 4: bossB_paintFinalEcho(c); break;
+    case 5: bossB_paintAshLord(c); break;
+  }
+  c.restore();
+}
+
+function bossB_dynamicColossus(c, t, danger) {
+  const pulse = 0.80 + Math.sin(t * 1.9) * 0.13 + danger * 0.18;
+  c.save();
+  c.globalAlpha *= pulse;
+  c.globalCompositeOperation = 'lighter';
+  bossB_glow(c, 0, 0.01, 0.65, 'rgba(239,103,35,0.42)');
+  bossB_glow(c, 0, 0.01, 0.36, 'rgba(255,190,70,0.44)');
+  const gradient = c.createRadialGradient(-0.06, -0.10, 0.01, 0, 0.01, 0.35);
+  gradient.addColorStop(0, '#fff1a6');
+  gradient.addColorStop(0.30, '#ffb13e');
+  gradient.addColorStop(0.72, '#d55326');
+  gradient.addColorStop(1, '#6d2030');
+  bossB_polygon(c, [[-0.22, -0.17], [0, -0.29], [0.22, -0.17], [0.25, 0.07],
+    [0, 0.29], [-0.25, 0.07]], gradient, '#ffb45b', 0.014);
+  c.strokeStyle = '#ffd37a';
+  c.lineWidth = 0.018;
+  c.beginPath();
+  c.moveTo(-0.17, -0.87);
+  c.lineTo(0.17, -0.87);
+  c.stroke();
+  c.restore();
+}
+
+function bossB_dynamicThousandEyes(c, t, danger) {
+  const pulse = 0.78 + Math.sin(t * 1.45 + 0.8) * 0.13 + danger * 0.16;
+  c.save();
+  const baseAlpha = c.globalAlpha;
+  c.globalAlpha *= pulse;
+  bossB_eye(c, 0, -0.06, 0.285, 0.15, '#e88a52');
+  c.globalCompositeOperation = 'lighter';
+  bossB_glow(c, 0, 0, 0.85, 'rgba(128,75,153,0.13)');
+  for (let i = 0; i < 10; i++) {
+    const angle = -Math.PI / 2 + i * BOSS_B_TAU / 10;
+    const blink = 0.60 + Math.sin(t * 1.7 + i * 1.91) * 0.25;
+    c.globalAlpha = baseAlpha * pulse * blink;
+    c.save();
+    c.translate(Math.cos(angle) * 0.89, Math.sin(angle) * 0.89);
+    c.rotate(angle + Math.PI / 2);
+    bossB_ellipse(c, 0, 0, 0.072, 0.038, i % 2 ? '#d88470' : '#75bdc1');
+    bossB_ellipse(c, 0, 0, 0.016, 0.034, '#10101a');
+    bossB_circle(c, -0.018, -0.012, 0.010, '#f5e5c0');
+    c.restore();
+  }
+  const smallEyes = [[-0.40, -0.28], [0.40, -0.28], [-0.45, 0.18],
+    [0.45, 0.18], [-0.22, 0.43], [0.22, 0.43]];
+  c.globalAlpha = baseAlpha * pulse * 0.82;
+  for (let i = 0; i < smallEyes.length; i++) {
+    const eye = smallEyes[i];
+    bossB_circle(c, eye[0], eye[1], 0.032, i % 2 ? '#c387bb' : '#d99a61');
+    bossB_circle(c, eye[0], eye[1], 0.011, '#fff0c2');
+  }
+  c.strokeStyle = '#8fb3ba';
+  c.lineWidth = 0.012;
+  for (let i = 0; i < 2; i++) {
+    const start = t * 0.20 + i * Math.PI;
+    c.beginPath();
+    c.arc(0, 0, 1.03, start, start + 1.15);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function bossB_dynamicNightDancer(c, t, danger) {
+  const pulse = 0.76 + Math.sin(t * 1.55 + 1.7) * 0.15 + danger * 0.17;
+  c.save();
+  c.globalAlpha *= pulse;
+  c.globalCompositeOperation = 'lighter';
+  bossB_glow(c, 0, -0.22, 0.46, 'rgba(150,93,190,0.30)');
+  bossB_glow(c, 0, -0.22, 0.24, 'rgba(93,190,196,0.25)');
+  bossB_polygon(c, [[0, -0.34], [0.085, -0.22], [0, -0.09], [-0.085, -0.22]],
+    '#b58bc4', '#a6d6d2', 0.012);
+  bossB_circle(c, -0.07, -0.70, 0.022, '#b8e2dc');
+  bossB_circle(c, 0.07, -0.70, 0.022, '#b8e2dc');
+  c.strokeStyle = '#a694c2';
+  c.lineWidth = 0.015;
+  for (let i = 0; i < 3; i++) {
+    const start = -t * 0.16 + i * BOSS_B_TAU / 3;
+    c.beginPath();
+    c.arc(0, -0.18, 1.05, start, start + 0.52);
+    c.stroke();
+    const orbAngle = t * 0.22 + i * BOSS_B_TAU / 3;
+    bossB_circle(c, Math.cos(orbAngle) * 1.05, -0.18 + Math.sin(orbAngle) * 1.05,
+      0.026, i === 1 ? '#e3b87b' : '#a4d5d3');
+  }
+  c.restore();
+}
+
+function bossB_dynamicRiftbreaker(c, t, danger, hitFlash) {
+  const pulse = 0.75 + Math.sin(t * 2.05 + 0.4) * 0.15 + danger * 0.18;
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  c.globalAlpha *= pulse;
+  bossB_glow(c, 0, -0.05, 0.77, 'rgba(130,72,180,0.25)');
+  const rift = [[0.01, -0.91], [-0.07, -0.65], [0.055, -0.39], [-0.06, -0.12],
+    [0.065, 0.14], [-0.045, 0.43], [0.025, 0.77]];
+  bossB_lines(c, [rift], '#a468c4', 0.042, 0.70);
+  bossB_lines(c, [rift], '#8bd1d1', 0.012, 0.95);
+  c.restore();
+
+  for (let i = 0; i < BOSS_B_FLOATING_SHARDS.length; i++) {
+    const shard = BOSS_B_FLOATING_SHARDS[i];
+    const bob = Math.sin(t * 0.85 + shard[3]) * 0.055;
+    c.save();
+    c.translate(shard[0] + Math.cos(t * 0.43 + shard[3]) * 0.025, shard[1] + bob);
+    c.rotate(t * (i % 2 ? -0.20 : 0.16) + shard[3]);
+    c.scale(shard[2], shard[2]);
+    bossB_polygon(c, [[0, -0.22], [0.12, -0.02], [0.04, 0.24], [-0.11, 0.06]],
+      hitFlash > 0.45 ? '#eee7ff' : (i % 2 ? '#435368' : '#543e67'), '#080a11', 0.055);
+    bossB_polygon(c, [[0, -0.18], [0.07, -0.01], [0.02, 0.16]],
+      hitFlash > 0.45 ? '#ffffff' : (i % 2 ? '#85a7b3' : '#9a77ac'));
+    c.restore();
+  }
+}
+
+function bossB_dynamicFinalEcho(c, t, danger) {
+  const pulse = 0.72 + Math.sin(t * 2.25 + 2.2) * 0.16 + danger * 0.20;
+  c.save();
+  const baseAlpha = c.globalAlpha;
+  c.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) {
+    const wave = (t * 0.23 + i / 3) % 1;
+    c.globalAlpha = baseAlpha * pulse * (1 - wave) * 0.55;
+    c.strokeStyle = i % 2 ? '#7fb5bd' : '#ad82b4';
+    c.lineWidth = 0.022 * (1 - wave) + 0.007;
+    c.beginPath();
+    c.arc(0, 0, 0.48 + wave * 0.90, 0, BOSS_B_TAU);
+    c.stroke();
+  }
+  c.globalAlpha = baseAlpha * pulse;
+  c.strokeStyle = '#d09a73';
+  c.lineWidth = 0.020;
+  for (let i = 0; i < 3; i++) {
+    const start = t * 0.28 + i * BOSS_B_TAU / 3;
+    c.beginPath();
+    c.arc(0, 0, 0.37, start, start + 0.83);
+    c.stroke();
+  }
+  // 两道错位残响只描边，空洞核心保持纯黑。
+  for (const side of [-1, 1]) {
+    c.globalAlpha = baseAlpha * pulse * 0.32;
+    c.strokeStyle = side < 0 ? '#8a6ca5' : '#6fa7b4';
+    c.lineWidth = 0.018;
+    c.beginPath();
+    c.arc(side * (0.07 + Math.sin(t * 1.2) * 0.018), 0, 0.53,
+      -Math.PI * 0.65, Math.PI * 0.65);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function bossB_dynamicAshLord(c, t, danger) {
+  const pulse = 0.78 + Math.sin(t * 1.8 + 2.5) * 0.14 + danger * 0.20;
+  c.save();
+  c.globalAlpha *= pulse;
+  c.globalCompositeOperation = 'lighter';
+  bossB_glow(c, 0, -0.05, 0.66, 'rgba(236,91,30,0.30)');
+  bossB_glow(c, 0, -0.06, 0.32, 'rgba(255,184,65,0.32)');
+  bossB_polygon(c, [[0, -0.22], [0.12, -0.06], [0, 0.14], [-0.12, -0.06]],
+    '#ffb34e', '#ffe09a', 0.012);
+  bossB_circle(c, -0.075, -0.70, 0.025, '#ffd079');
+  bossB_circle(c, 0.075, -0.70, 0.025, '#ffd079');
+
+  const flames = [[0, -1.20, 0.15, 0.36, 0], [-0.29, -1.07, 0.11, 0.28, -0.025],
+    [0.29, -1.07, 0.11, 0.28, 0.025], [-0.69, -0.80, 0.14, 0.38, -0.04],
+    [0.69, -0.80, 0.14, 0.38, 0.04]];
+  for (let i = 0; i < flames.length; i++) {
+    const flame = flames[i];
+    const flicker = 0.90 + Math.sin(t * 3.0 + i * 1.4) * 0.10;
+    bossB_flamePath(c, flame[0], flame[1], flame[2], flame[3] * flicker, flame[4]);
+    c.fillStyle = i < 3 ? '#e89745' : '#c55c35';
+    c.fill();
+    bossB_flamePath(c, flame[0], flame[1] - 0.015, flame[2] * 0.50,
+      flame[3] * 0.62 * flicker, flame[4] * 0.5);
+    c.fillStyle = '#ffd477';
+    c.fill();
+  }
+  c.restore();
+}
+
+function bossB_paintDynamic(c, index, time, danger, hitFlash) {
+  switch (index) {
+    case 0: bossB_dynamicColossus(c, time, danger); break;
+    case 1: bossB_dynamicThousandEyes(c, time, danger); break;
+    case 2: bossB_dynamicNightDancer(c, time, danger); break;
+    case 3: bossB_dynamicRiftbreaker(c, time, danger, hitFlash); break;
+    case 4: bossB_dynamicFinalEcho(c, time, danger); break;
+    case 5: bossB_dynamicAshLord(c, time, danger); break;
+  }
+}
+
+function bossB_paintEnrage(c, index, danger, time) {
+  if (danger <= 0) return;
+  const pulse = 0.5 + 0.5 * Math.sin(time * (4.0 + danger * 2.4) + index * 0.8);
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  c.globalAlpha = danger * (0.32 + pulse * 0.20);
+  const aura = c.createRadialGradient(0, 0, 0.30, 0, 0, 1.43);
+  aura.addColorStop(0, 'rgba(126,40,33,0)');
+  aura.addColorStop(0.62, 'rgba(188,66,32,0.16)');
+  aura.addColorStop(0.83, 'rgba(232,111,40,0.28)');
+  aura.addColorStop(1, 'rgba(92,35,44,0)');
+  c.fillStyle = aura;
+  c.beginPath();
+  c.arc(0, 0, 1.43, 0, BOSS_B_TAU);
+  c.fill();
+  c.restore();
+
+  c.save();
+  c.globalAlpha = danger * (0.60 + pulse * 0.32);
+  bossB_lines(c, BOSS_B_CRACKS[index], '#2b1118', 0.044, 0.90);
+  c.globalCompositeOperation = 'lighter';
+  bossB_lines(c, BOSS_B_CRACKS[index], '#d65d35', 0.025, 0.32);
+  bossB_lines(c, BOSS_B_CRACKS[index], '#ffc068', 0.010, 0.95);
+  c.restore();
+}
+
+/**
+ * 绘制全局 Boss 7～12。调用方保留世界变换；函数完整恢复 context 状态。
+ * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} c
+ * @param {number} index 0～5
+ * @param {number} x Boss 中心世界坐标
+ * @param {number} y Boss 中心世界坐标
+ * @param {number} radius 碰撞半径
+ * @param {number} time 秒
+ * @param {{hpRatio:number, hitFlash:number, dead:boolean}} state
+ */
+function drawBossB(c, index, x, y, radius, time, state) {
+  if (!c || !Number.isFinite(radius) || radius <= 0) return;
+  const bossIndex = ((Math.floor(Number(index) || 0) % 6) + 6) % 6;
+  const data = state || {};
+  const dead = Boolean(data.dead);
+  const hpRatio = data.hpRatio == null ? 1 : bossB_clamp(data.hpRatio);
+  const hitFlash = dead ? 0 : bossB_clamp(data.hitFlash || 0);
+  const danger = dead ? 0 : bossB_clamp((0.40 - hpRatio) / 0.40);
+  const rawTime = Number(time);
+  const t = dead ? 0 : (Number.isFinite(rawTime) ? rawTime : 0);
+  const phase = bossIndex * 1.41 + 0.6;
+  const breath = dead ? 1 : 1 + Math.sin(t * 1.02 + phase) * 0.018;
+  const bob = dead ? 0 : Math.sin(t * 0.76 + phase) * 0.014;
+  const sprite = bossB_getSprites(bossIndex);
+
+  c.save();
+  c.translate(x, y + radius * bob);
+  c.scale(radius * breath, radius * breath);
+  if (!dead && (bossIndex === 2 || bossIndex === 3)) {
+    c.rotate(Math.sin(t * 0.43 + phase) * 0.025);
+  }
+  c.globalAlpha = dead ? 0.34 : 1;
+  c.imageSmoothingEnabled = true;
+
+  if (sprite) {
+    c.drawImage(sprite.base, -BOSS_B_SPRITE_EXTENT / 2, -BOSS_B_SPRITE_EXTENT / 2,
+      BOSS_B_SPRITE_EXTENT, BOSS_B_SPRITE_EXTENT);
+  } else {
+    bossB_paintBase(c, bossIndex);
+  }
+  bossB_paintEnrage(c, bossIndex, danger, t);
+
+  c.save();
+  if (dead) c.globalAlpha *= 0.09;
+  bossB_paintDynamic(c, bossIndex, t, danger, hitFlash);
+  c.restore();
+
+  if (hitFlash > 0) {
+    c.save();
+    c.globalAlpha = hitFlash * 0.88;
+    if (sprite) {
+      c.drawImage(sprite.white, -BOSS_B_SPRITE_EXTENT / 2, -BOSS_B_SPRITE_EXTENT / 2,
+        BOSS_B_SPRITE_EXTENT, BOSS_B_SPRITE_EXTENT);
+    } else {
+      // 无离屏能力时仍只在 Boss 区域内闪白，不影响画布其他内容。
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.ellipse(0, 0, bossIndex === 3 ? 1.12 : 0.94, 1.08, 0, 0, BOSS_B_TAU);
+      c.fill();
+    }
+    c.restore();
+  }
+  c.restore();
+}
+
 // ── js/ui/arena.js ──
 // Canvas 竞技场渲染 + 触屏浮动摇杆。
 // 只负责画面与输入，不修改游戏状态。
+
+
+
+
 
 const world = {
   canvas: null,
@@ -11188,20 +14119,9 @@ function renderArena(ctxApp, run, dt) {
   c.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
   c.clearRect(0, 0, w, h);
 
-  // 背景
-  const bg = c.createRadialGradient(w / 2, h * 0.45, 40, w / 2, h / 2, Math.max(w, h) * 0.75);
-  bg.addColorStop(0, '#101321');
-  bg.addColorStop(0.6, '#0a0c14');
-  bg.addColorStop(1, '#05060a');
-  c.fillStyle = bg;
-  c.fillRect(0, 0, w, h);
-  for (const star of world.stars) {
-    const twinkle = 0.5 + Math.sin(world.time * 0.8 + star.phase) * 0.5;
-    c.globalAlpha = star.alpha * twinkle;
-    c.fillStyle = '#cfd8ff';
-    c.fillRect(star.x, star.y, star.size, star.size);
-  }
+  // 程序化地图背景（Kimi maps-art.js，离屏缓存）
   c.globalAlpha = 1;
+  drawMapBackground(c, run.mapIndex || 0, w, h, world.time);
 
   const arena = run.arena;
   const scale = Math.min(w / arena.w, h / arena.h);
@@ -11367,36 +14287,63 @@ function drawEnemies(c, run) {
       c.restore();
       c.globalAlpha = 1;
     }
-    // 本体
-    c.rotate(Math.PI / 4);
-    c.shadowColor = enemy.tint;
-    c.shadowBlur = isBoss ? 32 : isElite ? 20 : 10;
-    c.fillStyle = 'rgba(12,14,21,0.92)';
-    c.strokeStyle = enemy.tint;
-    c.lineWidth = isBoss ? 2.6 : 1.6;
-    const half = r * 0.92;
-    c.beginPath();
-    c.roundRect(-half, -half, half * 2, half * 2, isBoss ? 14 : 8);
-    c.fill();
-    c.stroke();
-    if (isElite) {
-      c.shadowBlur = 0;
-      c.strokeStyle = 'rgba(255,209,102,0.7)';
-      c.lineWidth = 1.4;
-      c.strokeRect(-half - 4, -half - 4, (half + 4) * 2, (half + 4) * 2);
+    // 本体：前 6 个 Boss 使用程序化美术，其余保留符号敌人
+    if (isBoss && enemy.bossIndex >= 0 && enemy.bossIndex < 12) {
+      c.save();
+      c.globalAlpha = 0.18;
+      c.fillStyle = enemy.tint;
+      c.shadowColor = enemy.tint;
+      c.shadowBlur = 36;
+      c.beginPath();
+      c.arc(enemy.x, enemy.y, r * 2.2, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+      c.save();
+      c.filter = 'brightness(1.65) contrast(1.08) saturate(1.15)';
+      if (enemy.bossIndex < 6) {
+        drawBossA(c, enemy.bossIndex, enemy.x, enemy.y, r, world.time, {
+          hpRatio: Math.max(0, enemy.hp / enemy.maxHp),
+          hitFlash: enemy.hitFlash || 0,
+          dead: false
+        });
+      } else {
+        drawBossB(c, enemy.bossIndex - 6, enemy.x, enemy.y, r, world.time, {
+          hpRatio: Math.max(0, enemy.hp / enemy.maxHp),
+          hitFlash: enemy.hitFlash || 0,
+          dead: false
+        });
+      }
+      c.restore();
+    } else {
+      c.rotate(Math.PI / 4);
+      c.shadowColor = enemy.tint;
+      c.shadowBlur = isBoss ? 32 : isElite ? 20 : 10;
+      c.fillStyle = 'rgba(12,14,21,0.92)';
+      c.strokeStyle = enemy.tint;
+      c.lineWidth = isBoss ? 2.6 : 1.6;
+      const half = r * 0.92;
+      c.beginPath();
+      c.roundRect(-half, -half, half * 2, half * 2, isBoss ? 14 : 8);
+      c.fill();
+      c.stroke();
+      if (isElite) {
+        c.shadowBlur = 0;
+        c.strokeStyle = 'rgba(255,209,102,0.7)';
+        c.lineWidth = 1.4;
+        c.strokeRect(-half - 4, -half - 4, (half + 4) * 2, (half + 4) * 2);
+      }
+      c.restore();
+      c.save();
+      c.translate(enemy.x, enemy.y);
+      c.fillStyle = enemy.tint;
+      c.shadowColor = enemy.tint;
+      c.shadowBlur = isBoss ? 24 : 10;
+      c.font = `${Math.round(r * (isBoss ? 1.5 : 1.25))}px "PingFang SC", sans-serif`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(enemy.glyph, 0, 1);
+      c.restore();
     }
-    c.restore();
-    // 字形
-    c.save();
-    c.translate(enemy.x, enemy.y);
-    c.fillStyle = enemy.tint;
-    c.shadowColor = enemy.tint;
-    c.shadowBlur = isBoss ? 24 : 10;
-    c.font = `${Math.round(r * (isBoss ? 1.5 : 1.25))}px "PingFang SC", sans-serif`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(enemy.glyph, 0, 1);
-    c.restore();
     // 血条
     const barW = Math.max(34, r * 2.4);
     const barY = enemy.y + r + 10;
@@ -13825,7 +16772,7 @@ function buildSettings(ctx) {
     ),
     list,
     h('div', { class: 'modal-foot' },
-      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v6.0'),
+      h('span', { class: 'tag subtle' }, '烬渊 EMBERFALL · v6.1'),
       h('button', { class: 'btn btn-ghost', onclick: () => closeModal(ctx) }, '关闭')
     )
   );
