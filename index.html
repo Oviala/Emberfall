@@ -5956,7 +5956,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-09T19:30:23.207Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T06:06:48.924Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6013,18 +6013,18 @@ const BAL = {
     { depth: 30, slots: 6 }
   ],
   enemy: {
-    hpBase: 31,
+    hpBase: 29,
     atkBase: 6.1,
-    hpGrowth: 1.12,
+    hpGrowth: 1.115,
     atkGrowth: 1.077,
-    maxAliveBase: 8,
-    maxAlivePerDepth: 1.5,
-    maxAliveCap: 56,
-    spawnIntervalBase: 1.0,
-    spawnIntervalMin: 0.2,
-    spawnDepthFactor: 0.022,
+    maxAliveBase: 6,
+    maxAlivePerDepth: 1.1,
+    maxAliveCap: 40,
+    spawnIntervalBase: 1.2,
+    spawnIntervalMin: 0.24,
+    spawnDepthFactor: 0.018,
     spawnTimeFactor: 0.00018,
-    batchFromDepth: 16,
+    batchFromDepth: 18,
     eliteChanceBase: 0.03,
     eliteChancePerDepth: 0.0025,
     eliteChanceMax: 0.16,
@@ -8008,6 +8008,11 @@ function makeEnemy(run, rng, kind, arch, x, y) {
     speed *= 0.98;
     xp *= 3;
     gold *= 3;
+  }
+  if (!boss) {
+    // 高血量 / 高护甲的怪额外减速，避免“又硬又追得快”。
+    const heavy = Math.max(0, arch.hp - 1) * 0.08 + arch.armor / 220;
+    speed *= Math.max(0.78, 1 - Math.min(0.22, heavy));
   }
   if (boss) {
     const index = Math.max(0, Math.floor(depth / e.bossEvery) - 1);
