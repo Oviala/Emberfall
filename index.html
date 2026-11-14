@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:18:33.824Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:22:15.997Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6316,8 +6316,8 @@ const BAL = {
     eliteHp: 3.2,
     eliteAtk: 1.25,
     bossEvery: 10,
-    bossHpMult: 14,
-    bossAtkMult: 1.4,
+    bossHpMult: 35,
+    bossAtkMult: 1.6,
     bossRadius: 40,
     bossSpeed: 62,
     bossBurstInterval: 5.0,
@@ -8674,7 +8674,12 @@ function spawnBoss(run, events) {
   const boss = spawnEnemy(run, 'boss');
   boss.skillTimer = 4.5;
   run.bossAddTimer = 3.2;
+  // Boss 登场怪潮：一波精英 + 普通怪。
+  for (let i = 0; i < 6; i++) spawnEnemy(run, 'elite');
+  for (let i = 0; i < 10; i++) spawnEnemy(run, 'normal');
+  pushEvent(events, { type: 'banner', title: '怪潮', sub: 'THE TIDE FOLLOWS', tone: 'boss' });
   pushLog(run, `首领「${boss.name}」出现`);
+  pushLog(run, '怪潮随首领一同涌出');
   pushEvent(events, { type: 'boss', name: boss.name, x: boss.x, y: boss.y });
   pushEvent(events, { type: 'banner', title: '首领', sub: boss.name, tone: 'boss' });
 }
@@ -8996,7 +9001,7 @@ function updateSpawning(run, dt, events) {
     run.bossAddTimer = (run.bossAddTimer || 0) - dt;
     if (run.bossAddTimer <= 0) {
       const elites = run.enemies.filter((enemy) => !enemy.dead && enemy.elite).length;
-      if (elites < 6) spawnEnemy(run, 'elite');
+      if (elites < 10) spawnEnemy(run, 'elite');
       run.bossAddTimer = 3.8;
     }
     return;
@@ -15137,6 +15142,27 @@ function drawEnemies(c, run) {
         c.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
         c.stroke();
       }
+      c.restore();
+      // 明确的 Boss 锁定圈，帮助识别本体与伤害判定中心。
+      c.save();
+      c.strokeStyle = 'rgba(255, 209, 102, 0.7)';
+      c.lineWidth = 1.6;
+      c.setLineDash([5, 7]);
+      c.beginPath();
+      c.arc(enemy.x, enemy.y, r + 8, 0, Math.PI * 2);
+      c.stroke();
+      c.setLineDash([]);
+      c.strokeStyle = 'rgba(255, 230, 176, 0.55)';
+      c.beginPath();
+      c.moveTo(enemy.x - r - 16, enemy.y);
+      c.lineTo(enemy.x - r - 5, enemy.y);
+      c.moveTo(enemy.x + r + 5, enemy.y);
+      c.lineTo(enemy.x + r + 16, enemy.y);
+      c.moveTo(enemy.x, enemy.y - r - 16);
+      c.lineTo(enemy.x, enemy.y - r - 5);
+      c.moveTo(enemy.x, enemy.y + r + 5);
+      c.lineTo(enemy.x, enemy.y + r + 16);
+      c.stroke();
       c.restore();
     } else {
       c.rotate(Math.PI / 4);
