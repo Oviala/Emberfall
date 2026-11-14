@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-13T17:52:33.700Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T00:36:39.303Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -7255,7 +7255,7 @@ const LAYER_SKILLS = [
   {
     id: 'totem', name: '诱饵图腾', glyph: '图', cd: 8, role: 'normal', behavior: 'decoyTotem',
     element: null, physical: true, color: '#d8b48a', type: '层专属 · 控场', minLayer: 2,
-    desc: (ap) => `在脚下立起持续 4 秒的图腾，缓慢牵引附近敌人，结束时爆炸造成 ${Math.round(170 * ap)}% 范围伤害。`,
+    desc: (ap) => `在脚下立起持续 4 秒的嘲讽图腾，范围内敌人改为攻击它；图腾有独立生命，被打破或结束时爆炸，造成 ${Math.round(180 * ap)}% 范围伤害。`,
     flavor: '它替你站在那里，也替你挨打。'
   },
   {
@@ -8081,6 +8081,7 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     layerSkillIds: layerSkillsFor(layer),
     layerActiveSkillIds: layerSkillsFor(layer).slice(-2),
     echoes: [],
+    decoys: [],
     walls: [],
     mirrorUntil: 0,
     timeStop: 0,
@@ -9051,6 +9052,18 @@ function updateEchoes(run, dt, events) {
   run.echoes = run.echoes.filter((echo) => echo.life > 0);
 }
 
+function updateDecoys(run, dt, events) {
+  if (!run.decoys || !run.decoys.length) return;
+  for (const decoy of run.decoys) {
+    decoy.life -= dt;
+    if (decoy.life > 0 && decoy.hp > 0) continue;
+    decoy.life = 0;
+    aoeDamage(run, decoy.x, decoy.y, 155, decoy.dmg, events, { color: decoy.color });
+    pushEvent(events, { type: 'ring', x: decoy.x, y: decoy.y, radius: 155, color: decoy.color });
+  }
+  run.decoys = run.decoys.filter((decoy) => decoy.life > 0);
+}
+
 function updateWalls(run, dt, events) {
   if (!run.walls || !run.walls.length) return;
   for (const wall of run.walls) {
@@ -9327,8 +9340,17 @@ function updateEnemies(run, dt, events) {
     }
     if (enemy.reactionCd > 0) enemy.reactionCd -= dt;
     if (enemy.contactTimer > 0) enemy.contactTimer -= dt;
-    const dx = player.x - enemy.x;
-    const dy = player.y - enemy.y;
+    // 诱饵图腾：范围内的敌人转而攻击图腾。
+    let taunt = null;
+    let tauntDist = 280;
+    for (const decoy of run.decoys || []) {
+      if (decoy.life <= 0 || decoy.hp <= 0) continue;
+      const dd = distance(enemy.x, enemy.y, decoy.x, decoy.y);
+      if (dd < tauntDist) { tauntDist = dd; taunt = decoy; }
+    }
+    const target = taunt || player;
+    const dx = target.x - enemy.x;
+    const dy = target.y - enemy.y;
     const d = Math.hypot(dx, dy) || 1;
     const slowFactor = (1 - globalSlow) * (1 - passiveSlow) * (enemy.chillUntil > now ? 0.55 : 1);
     if (enemy.stunUntil > now) {
@@ -9348,7 +9370,7 @@ function updateEnemies(run, dt, events) {
         moveX = -dy / d;
         moveY = dx / d;
       }
-    } else if (d < stopDistance) {
+    } else if (d < (taunt ? taunt.radius + enemy.radius : stopDistance)) {
       moveX = 0;
       moveY = 0;
     }
@@ -9357,15 +9379,21 @@ function updateEnemies(run, dt, events) {
     enemy.vy = moveY * speed;
     enemy.x = clamp(enemy.x + enemy.vx * dt, enemy.radius, run.arena.w - enemy.radius);
     enemy.y = clamp(enemy.y + enemy.vy * dt, enemy.radius, run.arena.h - enemy.radius);
-    if (d < enemy.radius + player.radius + 2 && enemy.contactTimer <= 0) {
+    if (d < enemy.radius + (taunt ? taunt.radius : player.radius) + 2 && enemy.contactTimer <= 0) {
       enemy.contactTimer = enemy.interval * (1 + globalSlow * 0.6);
       const raw = enemy.atk;
-      damagePlayer(run, raw, events, { source: 'contact' });
-      if (!run.active) return;
-      if (stats.thorns > 0 && !enemy.dead) {
-        hitEnemy(run, enemy, Math.min(raw * stats.thorns, stats.atk * 2), events, { quiet: true, noBurn: true });
+      if (taunt) {
+        taunt.hp -= raw * 1.4;
+        pushEvent(events, { type: 'ring', x: taunt.x, y: taunt.y, radius: 24, color: taunt.color });
+        if (taunt.hp <= 0) taunt.life = 0;
+      } else {
+        damagePlayer(run, raw, events, { source: 'contact' });
+        if (!run.active) return;
+        if (stats.thorns > 0 && !enemy.dead) {
+          hitEnemy(run, enemy, Math.min(raw * stats.thorns, stats.atk * 2), events, { quiet: true, noBurn: true });
+        }
+        if (run.mods.flags.chillContact && !enemy.dead) applyElement(run, enemy, 'ice', events);
       }
-      if (run.mods.flags.chillContact && !enemy.dead) applyElement(run, enemy, 'ice', events);
     }
     if (isRanged) {
       enemy.shootTimer -= dt * (1 - globalSlow * 0.5);
@@ -9800,9 +9828,10 @@ function castAbility(run, id) {
       pushEvent(events, { type: 'ring', x: target.x, y: target.y, radius: 34, color: def.color });
     }
   } else if (behavior === 'decoyTotem') {
-    spawnZone(run, {
-      kind: 'decoy', x: player.x, y: player.y, radius: 130, duration: 4,
-      tickInterval: 0.7, dmg: attack * 0.28, element: null, color: def.color, pull: 30
+    run.decoys.push({
+      id: run.nextId++, x: player.x, y: player.y, radius: 26,
+      hp: run.maxHp * 0.45, maxHp: run.maxHp * 0.45, life: 4,
+      color: def.color, dmg: attack * 1.8
     });
     pushEvent(events, { type: 'banner', title: '诱饵图腾', sub: 'TAUNT', tone: 'small' });
   } else if (behavior === 'mirrorStance') {
@@ -10151,8 +10180,17 @@ function autoPilotInput(run) {
   let nearestDist = Infinity;
   for (const enemy of run.enemies) {
     if (enemy.dead) continue;
-    const dx = player.x - enemy.x;
-    const dy = player.y - enemy.y;
+    // 诱饵图腾：范围内的敌人转而攻击图腾。
+    let taunt = null;
+    let tauntDist = 280;
+    for (const decoy of run.decoys || []) {
+      if (decoy.life <= 0 || decoy.hp <= 0) continue;
+      const dd = distance(enemy.x, enemy.y, decoy.x, decoy.y);
+      if (dd < tauntDist) { tauntDist = dd; taunt = decoy; }
+    }
+    const target = taunt || player;
+    const dx = target.x - enemy.x;
+    const dy = target.y - enemy.y;
     const d = Math.hypot(dx, dy) || 1;
     if (d < nearestDist) {
       nearestDist = d;
@@ -10230,6 +10268,7 @@ function stepRun(run, dt = STEP) {
   updateSpawning(run, step, events);
   updateEchoes(run, step, events);
   updateWalls(run, step, events);
+  updateDecoys(run, step, events);
   if (run.timeStop > 0) run.timeStop = Math.max(0, run.timeStop - step);
   updatePlayerProjectiles(run, step, events);
   updateEnemyShots(run, step, events);
@@ -10529,6 +10568,7 @@ function hydrateRun(data) {
   run.layerSkillIds = run.layerSkillIds || layerSkillsFor(run.layer || run.depth || 1);
   run.layerActiveSkillIds = run.layerActiveSkillIds || run.layerSkillIds.slice(-2);
   run.echoes = run.echoes || [];
+  run.decoys = run.decoys || [];
   run.walls = run.walls || [];
   run.mirrorUntil = run.mirrorUntil || 0;
   run.timeStop = run.timeStop || 0;
@@ -14546,6 +14586,7 @@ function renderArena(ctxApp, run, dt) {
   drawZones(c, run);
   drawWalls(c, run);
   drawEchoes(c, run);
+  drawDecoys(c, run);
   drawEnemies(c, run);
   // Boss 美术模块可能改动变换/透明度；画完后强制恢复世界坐标，避免玩家被画到地图外。
   c.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
@@ -14626,6 +14667,37 @@ function drawZones(c, run) {
       c.lineTo(zone.x + Math.cos(a + 0.25) * r * 1.35, zone.y + Math.sin(a + 0.25) * r * 1.35);
       c.stroke();
     }
+    c.restore();
+  }
+}
+
+function drawDecoys(c, run) {
+  if (!run.decoys || !run.decoys.length) return;
+  for (const decoy of run.decoys) {
+    c.save();
+    c.globalAlpha = 0.9;
+    c.translate(decoy.x, decoy.y);
+    c.strokeStyle = decoy.color || '#d8b48a';
+    c.lineWidth = 2.2;
+    c.fillStyle = 'rgba(40,30,24,0.75)';
+    c.beginPath();
+    c.arc(0, 0, decoy.radius, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.beginPath();
+    c.moveTo(0, -decoy.radius * 0.8);
+    c.lineTo(0, decoy.radius * 0.8);
+    c.moveTo(-decoy.radius * 0.6, 0);
+    c.lineTo(decoy.radius * 0.6, 0);
+    c.globalAlpha = 0.35;
+    c.stroke();
+    // 独立生命条
+    const w = decoy.radius * 2;
+    c.globalAlpha = 1;
+    c.fillStyle = 'rgba(0,0,0,0.55)';
+    c.fillRect(-w / 2, decoy.radius + 7, w, 4);
+    c.fillStyle = decoy.color || '#d8b48a';
+    c.fillRect(-w / 2, decoy.radius + 7, w * Math.max(0, decoy.hp / decoy.maxHp), 4);
     c.restore();
   }
 }
