@@ -6227,7 +6227,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:57:56.325Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T03:01:37.707Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -7697,6 +7697,9 @@ function createMeta(now = Date.now()) {
     totalEmbers: 0,
     bestDepth: 0, // 本轮（本次轮回后）最深
     maxLayer: 1,
+    maxLayerBackup: 1,
+    layerClears: [],
+    lastLayer: 1,
     allTimeBest: 0,
     allTimeBestRunEmbers: 0,
     tree: {},
@@ -10653,12 +10656,20 @@ function finishRun(meta, run, { died = false, victory = false } = {}) {
   meta.allTimeBest = Math.max(meta.allTimeBest || 0, run.layer || run.depth);
   const layer = run.layer || run.depth || 1;
   meta.maxLayer = Math.max(meta.maxLayer || 1, victory ? Math.min(BAL.layers.maxLayer, layer + 1) : layer);
+  if (victory) {
+    meta.layerClears = Array.isArray(meta.layerClears) ? meta.layerClears : [];
+    if (!meta.layerClears.some((entry) => entry && entry.layer === layer)) meta.layerClears.push({ layer, at: Date.now() });
+    meta.maxLayerBackup = Math.max(meta.maxLayerBackup || 1, meta.maxLayer);
+  }
+  meta.lastLayer = Math.min(meta.maxLayer || 1, layer);
   if (embers > (meta.allTimeBestRunEmbers || 0)) meta.allTimeBestRunEmbers = embers;
   run.active = false;
   run.ended = true;
   const report = {
     depth: layer,
     layer,
+    maxLayer: meta.maxLayer,
+    layerClears: (meta.layerClears || []).slice(),
     victory,
     kills: run.kills,
     embers,
@@ -10974,7 +10985,12 @@ function hydrateMeta(raw) {
   meta.allTimeBest = safeNumber(meta.allTimeBest);
   // 层数进度：优先读 maxLayer；旧存档用历史最深兜底，避免更新后回到第 1 层。
   const legacyLayer = Math.min(10, Math.max(1, meta.allTimeBest || meta.bestDepth || 1));
-  meta.maxLayer = Math.max(1, Math.min(10, safeNumber(meta.maxLayer) || legacyLayer));
+  const backupLayer = Math.max(1, safeNumber(meta.maxLayerBackup) || 1);
+  const clearLayer = Array.isArray(meta.layerClears) ? meta.layerClears.reduce((best, entry) => Math.max(best, (safeNumber(entry && entry.layer) || 0) + 1), 1) : 1;
+  const storedLayer = Math.max(1, safeNumber(meta.maxLayer) || 1);
+  meta.maxLayer = Math.max(1, Math.min(10, Math.max(storedLayer, backupLayer, clearLayer, legacyLayer)));
+  meta.maxLayerBackup = Math.max(meta.maxLayer, Math.min(10, backupLayer));
+  meta.lastLayer = Math.max(1, Math.min(meta.maxLayer, safeNumber(meta.lastLayer) || meta.maxLayer));
   // 旧版无限深度纪录迁移为最高解锁层，避免主页继续显示 32 层之类的旧数据。
   meta.bestDepth = Math.min(Math.max(0, meta.bestDepth), meta.maxLayer);
   meta.allTimeBest = Math.min(Math.max(0, meta.allTimeBest), meta.maxLayer);
@@ -17808,6 +17824,24 @@ function createApp() {
   let meta = loaded || createMeta();
   let run = meta.run || null;
   meta.run = null;
+  // 仅对打开该链接的浏览器生效：?grantLayer=4 恢复/设置最高解锁层。
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const grant = Math.floor(Number(params.get('grantLayer')));
+    if (Number.isFinite(grant) && grant >= 1 && grant <= 10) {
+      meta.maxLayer = Math.max(meta.maxLayer || 1, grant);
+      meta.maxLayerBackup = Math.max(meta.maxLayerBackup || 1, meta.maxLayer);
+      meta.lastLayer = grant;
+      meta.bestDepth = Math.max(meta.bestDepth || 0, grant - 1);
+      meta.allTimeBest = Math.max(meta.allTimeBest || 0, grant - 1);
+      saveMeta(storage, meta);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('grantLayer');
+      window.history.replaceState({}, '', url.toString());
+    }
+  } catch {
+    /* 无 location 环境下忽略 */
+  }
   const fresh = !loaded;
 
   const keys = new Set();
