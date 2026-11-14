@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:14:36.488Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:18:33.824Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -8123,7 +8123,9 @@ function pushLog(run, text) {
 // ───────────────────────── 创建与属性 ─────────────────────────
 
 function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0, opts = {}) {
-  const arena = { ...DEFAULT_ARENA, ...(opts.arena || {}) };
+  const baseArena = { ...DEFAULT_ARENA, ...(opts.arena || {}) };
+  const camera = !!opts.camera;
+  const arena = camera ? { w: Math.round(baseArena.w * 1.5), h: Math.round(baseArena.h * 1.5) } : baseArena;
   const layer = Math.max(1, Math.min(BAL.layers.maxLayer, Math.floor(opts.layer || 1)));
   const layerDef = layerInfo(layer);
   const run = {
@@ -8149,6 +8151,8 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     paidRerolls: 0,
     seed: seed >>> 0,
     arena,
+    arenaBase: baseArena,
+    camera,
     active: true,
     ended: false,
     paused: false,
@@ -10780,6 +10784,8 @@ function hydrateRun(data) {
   const run = { ...data };
   run._rng = new Rng(run.rngState || run.seed || 1);
   run.arena = run.arena || { w: 1120, h: 680 };
+  run.arenaBase = run.arenaBase || run.arena;
+  run.camera = !!run.camera;
   run.player = run.player || {
     x: run.arena.w / 2,
     y: run.arena.h / 2,
@@ -14446,6 +14452,10 @@ function prewarmBossB(index) {
 
 
 
+function clampCamera(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 const world = {
   canvas: null,
   ctx: null,
@@ -14803,12 +14813,23 @@ function renderArena(ctxApp, run, dt) {
   drawMapBackground(c, run.mapIndex || 0, w, h, world.time);
 
   const arena = run.arena;
-  const scale = Math.min(w / arena.w, h / arena.h);
-  const ox = (w - arena.w * scale) / 2;
-  const oy = (h - arena.h * scale) / 2;
+  const base = run.arenaBase || arena;
+  const scale = Math.min(w / base.w, h / base.h);
+  const viewW = w / scale;
+  const viewH = h / scale;
+  let camX = 0;
+  let camY = 0;
+  if (run.camera) {
+    camX = clampCamera(run.player.x - viewW / 2, 0, Math.max(0, arena.w - viewW));
+    camY = clampCamera(run.player.y - viewH / 2, 0, Math.max(0, arena.h - viewH));
+  }
+  const ox = run.camera ? -camX * scale : (w - arena.w * scale) / 2;
+  const oy = run.camera ? -camY * scale : (h - arena.h * scale) / 2;
   world.scale = scale;
   world.ox = ox;
   world.oy = oy;
+  world.camX = camX;
+  world.camY = camY;
 
   const shakeX = (Math.random() - 0.5) * world.shake;
   const shakeY = (Math.random() - 0.5) * world.shake;
@@ -17537,7 +17558,7 @@ function openTutorial(ctx) {
 function buildTutorial(ctx) {
   const steps = [
     ['走位与第一技能', 'WASD / 方向键（手机拖动战斗区）移动，角色自动锁敌射击。开局没有主动技能，首次升级三选一中选择技能根节点来获得第一个技能。'],
-    ['14 技能 · 6 格', '14 个主动技能分为速射、普通与重型。技能槽在深度 1 / 8 / 15 / 24 / 35 / 48 逐步解锁，最多 6 个；点击圆形图标可查看真实冷却和技能详情。'],
+    ['14 技能 · 6 格', '14 个基础技能分为速射、普通与重型，另有层专属技能。技能槽按玩家等级 1 / 4 / 7 / 10 / 13 / 16 解锁，且每层有独立上限；点击圆形图标可查看真实冷却和技能详情。'],
     ['层 = 一局', '每层是独立一局：主页选层，连续刷怪，击败本层 Boss 后通关并解锁下一层；每局两次商店，每次最多买一件。'],
     ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
     ['组合无需购买', '普通组合需双方各 3 点共鸣，强共鸣各 4 点；合成需双方各 4 点且都点亮进阶。数值强化与进阶积累共鸣，组合图鉴只用于查看目标与进度。'],
@@ -17741,7 +17762,7 @@ function createApp() {
       if (hasModal() && activeModalType() === 'report') closeModal(ctx);
       showRunView(ctx);
       const layer = Math.max(1, Math.min(meta.maxLayer || 1, ui.selectedLayer || 1));
-      run = createRun(meta, undefined, { arena: suggestArenaSize(), layer });
+      run = createRun(meta, undefined, { arena: suggestArenaSize(), layer, camera: true });
       run.autoPilot = !!meta.settings.autoDelve;
       run.autoCast = !!(meta.settings.autoCast || meta.settings.autoDelve);
       run.autoSkills = meta.settings.autoSkills !== false;
