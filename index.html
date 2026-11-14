@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:03:41.067Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:06:27.954Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -8135,8 +8135,8 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     shopMilestones: [],
     shopTaken: [],
     shopBought: false,
-    layerSkillIds: layerSkillsFor(layer),
-    layerActiveSkillIds: layerSkillsFor(layer).slice(-2),
+    layerSkillIds: [],
+    layerActiveSkillIds: [],
     echoes: [],
     decoys: [],
     walls: [],
@@ -8224,7 +8224,7 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     log: [],
     lastProgressAt: 0
   };
-  run.skillCap = Math.min(run.maxSkillSlots, Math.max(skillSlotsAt(1), Math.min(2, (run.layerActiveSkillIds || []).length)));
+  run.skillCap = Math.min(run.maxSkillSlots, skillSlotsAt(1));
   run._rng = new Rng(run.seed);
   run.rngState = run._rng.state;
   recomputeStats(run);
@@ -8252,7 +8252,7 @@ function collectUnlockedAbilities(run) {
   const list = unlocked
     .filter((id) => ABILITY_BY_ID[id] && !fusedComponents.has(id))
     .sort((a, b) => order.indexOf(a) - order.indexOf(b));
-  for (const id of (run.layerActiveSkillIds || []).slice()) {
+  for (const id of (run.layerSkillIds || []).slice()) {
     if (ALL_ABILITY_BY_ID[id] && !list.includes(id)) list.unshift(id);
   }
   for (const fusionId of run.fusions || []) {
@@ -8332,6 +8332,13 @@ function availableSkillTraitChoices(run) {
   return choices;
 }
 
+function availableLayerSkillChoices(run) {
+  return layerSkillsFor(run.layer)
+    .filter((id) => !(run.layerSkillIds || []).includes(id) && !(run.abilities || []).includes(id))
+    .map((id) => ALL_ABILITY_BY_ID[id])
+    .filter(Boolean);
+}
+
 function draftChoiceInfo(run, choiceId) {
   if (!choiceId) return null;
   if (choiceId.startsWith('tree:')) {
@@ -8356,6 +8363,12 @@ function draftChoiceInfo(run, choiceId) {
       name: `${ability.name}·${stat.label}`,
       desc: `「${ability.name}」${stat.label} ${label}（可重复出现）`
     };
+  }
+  if (choiceId.startsWith('layerskill:')) {
+    const id = choiceId.slice(11);
+    const ability = ALL_ABILITY_BY_ID[id];
+    if (!ability || !layerSkillsFor(run.layer).includes(id)) return null;
+    return { kind: 'layerSkill', id: choiceId, skill: id, ability, name: ability.name, desc: ability.desc(run.stats?.abilityPower || 1) };
   }
   if (choiceId.startsWith('skilltrait:')) {
     const [, skillId, traitId] = choiceId.split(':');
@@ -10199,8 +10212,15 @@ function rollDraft(run, count = BAL.level.draftSize) {
   if (treeIds.length) picks.push(`tree:${rng.pick(treeIds)}`);
   const numeric = makeSkillNumericChoice(run);
   if (numeric) picks.push(numeric.id);
+  if (picks.length < count) {
+    const layerPool = availableLayerSkillChoices(run);
+    if (layerPool.length) {
+      const picked = rng.pick(layerPool);
+      picks.push(`layerskill:${picked.id}`);
+    }
+  }
   const traitPool = availableSkillTraitChoices(run);
-  if (traitPool.length) {
+  if (traitPool.length && picks.length < count) {
     const picked = rng.pick(traitPool);
     picks.push(`skilltrait:${picked.skillId}:${picked.trait.id}`);
   }
@@ -10217,7 +10237,7 @@ function rollDraft(run, count = BAL.level.draftSize) {
     while (picks.length < count && remaining.length) picks.push(`tree:${remaining.shift()}`);
   }
   run.rngState = rng.state;
-  return rng.shuffle(picks);
+  return rng.shuffle(picks).slice(0, count);
 }
 
 function openLevelDraft(run, events) {
@@ -10249,6 +10269,14 @@ function chooseCard(run, cardId) {
     recomputeStats(run);
     pushLog(run, `技能强化「${choice.name}」`);
     return { ok: true, skillUpgrade: true, skill: choice.skill, name: choice.name, events: [{ type: 'skillUpgrade', id: choice.skill, name: choice.name, stat: choice.stat, value: choice.value }] };
+  }
+  if (choice.kind === 'layerSkill') {
+    run.draft = null;
+    run.layerSkillIds = run.layerSkillIds || [];
+    if (!run.layerSkillIds.includes(choice.skill)) run.layerSkillIds.push(choice.skill);
+    recomputeStats(run);
+    pushLog(run, `习得层专属技能「${choice.name}」`);
+    return { ok: true, layerSkill: true, skill: choice.skill, events: [{ type: 'layerSkill', id: choice.skill, name: choice.name }] };
   }
   if (choice.kind === 'skillTrait') {
     run.draft = null;
@@ -10614,6 +10642,10 @@ function autoPickCard(run) {
       if (100 > bestScore) { bestScore = 100; best = id; }
       continue;
     }
+    if (id.startsWith('layerskill:')) {
+      if (96 > bestScore) { bestScore = 96; best = id; }
+      continue;
+    }
     if (id.startsWith('skilltrait:')) {
       if (94 > bestScore) { bestScore = 94; best = id; }
       continue;
@@ -10781,8 +10813,8 @@ function hydrateRun(data) {
   run.depthProgress = run.depthProgress || 0;
   run.wave = run.wave || 1;
   run.wavesPerLayer = run.wavesPerLayer || wavesForLayer(run.depth || 1);
-  run.layerSkillIds = run.layerSkillIds || layerSkillsFor(run.layer || run.depth || 1);
-  run.layerActiveSkillIds = run.layerActiveSkillIds || run.layerSkillIds.slice(-2);
+  run.layerSkillIds = run.layerSkillIds || [];
+  run.layerActiveSkillIds = [];
   run.echoes = run.echoes || [];
   run.decoys = run.decoys || [];
   run.walls = run.walls || [];
@@ -17190,6 +17222,23 @@ function buildDraft(ctx, spec) {
         h('span', { class: 'draft-name' }, node.name),
         h('span', { class: 'draft-flavor' }, node.kind === 'root' ? '新的主动技能与技能强度' : node.kind === 'advanced' ? '伤害 / 数量 / 冷却三重提升' : '两个相邻分支的跨系增益'),
         h('ul', { class: 'draft-effects' }, lines.map((line) => h('li', {}, h('span', {}, line))))
+      );
+    } else if (info.kind === 'layerSkill') {
+      const ability = info.ability;
+      button = h('button', {
+        class: 'draft-card skill-upgrade-card draft-kind-layer-skill has-desc',
+        style: `--rar:${ability.color || '#ffd166'}`,
+        onclick: pick,
+        'aria-label': `层专属技能：${ability.name}，${info.desc}`
+      },
+        h('span', { class: 'draft-rarity' }, `层专属技能 · 第 ${ability.minLayer} 层`),
+        h('span', { class: 'draft-index' }, index + 1),
+        h('span', { class: 'draft-glyph' }, abilityIcon(ability.id)),
+        h('span', { class: 'draft-name' }, ability.name),
+        h('span', { class: 'draft-flavor' }, ability.type || '层专属'),
+        h('ul', { class: 'draft-effects' },
+          h('li', { class: 'draft-key-benefit' }, h('span', {}, info.desc))
+        )
       );
     } else if (info.kind === 'skillTrait') {
       const ability = info.ability;
