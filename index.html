@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T00:40:30.568Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:32:38.116Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6288,14 +6288,14 @@ const BAL = {
     killsPerDepthPerTen: 2, // 每深入 10 层，推进一层所需击杀 +2
     healPct: 0.12
   },
-  // v4 阶段性技能槽：深度 1/5/10/16/22/30，最多 6 个主动技能位。
+  // 技能槽按玩家等级解锁：1/2/4/6/8/10，最多 6 个主动技能位。
   skillSlots: [
-    { depth: 1, slots: 1 },
-    { depth: 4, slots: 2 },
-    { depth: 7, slots: 3 },
-    { depth: 10, slots: 4 },
-    { depth: 14, slots: 5 },
-    { depth: 18, slots: 6 }
+    { level: 1, slots: 1 },
+    { level: 2, slots: 2 },
+    { level: 4, slots: 3 },
+    { level: 6, slots: 4 },
+    { level: 8, slots: 5 },
+    { level: 10, slots: 6 }
   ],
   enemy: {
     hpBase: 26,
@@ -6446,21 +6446,21 @@ function offlineGain(bestDepth, seconds, offlinePct = 0, capBonusHours = 0) {
 }
 
 // 阶段性技能槽：返回当前深度可同时携带的主动技能数量。
-function skillSlotsAt(depth) {
-  const d = Math.max(1, Math.floor(depth || 1));
+function skillSlotsAt(level) {
+  const l = Math.max(1, Math.floor(level || 1));
   let slots = BAL.skillSlots[0].slots;
   for (const stage of BAL.skillSlots) {
-    if (d >= stage.depth) slots = stage.slots;
+    if (l >= stage.level) slots = stage.slots;
     else break;
   }
   return slots;
 }
 
-// 下一个技能槽的解锁深度（已满则返回 null）。
-function nextSkillSlot(depth) {
-  const d = Math.max(1, Math.floor(depth || 1));
+// 下一个技能槽的解锁等级（已满则返回 null）。
+function nextSkillSlot(level) {
+  const l = Math.max(1, Math.floor(level || 1));
   for (const stage of BAL.skillSlots) {
-    if (d < stage.depth) return { depth: stage.depth, slots: stage.slots };
+    if (l < stage.level) return { level: stage.level, slots: stage.slots };
   }
   return null;
 }
@@ -8165,7 +8165,7 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     log: [],
     lastProgressAt: 0
   };
-  run.skillCap = Math.max(skillSlotsAt(layer), Math.min(2, (run.layerActiveSkillIds || []).length));
+  run.skillCap = Math.max(skillSlotsAt(1), Math.min(2, (run.layerActiveSkillIds || []).length));
   run._rng = new Rng(run.seed);
   run.rngState = run._rng.state;
   recomputeStats(run);
@@ -8345,7 +8345,7 @@ function recomputeStats(run) {
   }
   const list = collectUnlockedAbilities(run);
   run.skillUpgrades = aggregateSkillUpgrades(run);
-  run.skillCap = Math.max(1, Math.min(BAL.skillSlots[BAL.skillSlots.length - 1].slots, run.skillCap || skillSlotsAt(run.depth)));
+  run.skillCap = Math.max(1, Math.min(BAL.skillSlots[BAL.skillSlots.length - 1].slots, run.skillCap || skillSlotsAt(run.level || 1)));
   const fusionList = list.filter((id) => FUSION_BY_ID[id]);
   const baseList = list.filter((id) => !FUSION_BY_ID[id]);
   const activeList = [...fusionList, ...baseList].slice(0, run.skillCap);
@@ -9495,6 +9495,12 @@ function gainXp(run, value, events) {
     run.xp -= run.xpNext;
     run.level += 1;
     run.xpNext = xpToNext(run.level);
+    const nextCap = skillSlotsAt(run.level);
+    if (nextCap > (run.skillCap || 1)) {
+      run.skillCap = nextCap;
+      recomputeStats(run);
+      pushEvent(events, { type: 'skillSlots', slots: nextCap, level: run.level });
+    }
     addUltCharge(run, 4);
     pushLog(run, `升到 ${run.level} 级`);
     pushEvent(events, { type: 'levelup', level: run.level });
@@ -10546,7 +10552,7 @@ function hydrateRun(data) {
   run.projectiles = run.projectiles || [];
   run.enemyShots = run.enemyShots || [];
   run.zones = run.zones || [];
-  run.skillCap = run.skillCap || skillSlotsAt(run.depth || 1);
+  run.skillCap = run.skillCap || skillSlotsAt(run.level || 1);
   run.orbs = run.orbs || [];
   run.cardCounts = run.cardCounts || {};
   run.relicIds = run.relicIds || [];
@@ -15505,8 +15511,8 @@ function buildAbilityBar(ctx, force = false) {
       const stage = BAL.skillSlots[index];
       slot.append(h('span', {
         class: 'skill-slot-empty',
-        'aria-label': unlocked ? `第 ${index + 1} 技能槽，等待升级三选一解锁` : `深度 ${stage?.depth || 30} 解锁第 ${index + 1} 技能槽`
-      }, unlocked ? '+' : '◇', !unlocked ? h('small', {}, stage?.depth || 30) : null));
+        'aria-label': unlocked ? `第 ${index + 1} 技能槽，等待升级三选一解锁` : `等级 ${stage?.level || 10} 解锁第 ${index + 1} 技能槽`
+      }, unlocked ? '+' : '◇', !unlocked ? h('small', {}, stage?.level || 10) : null));
     }
     delveEls.abilityBar.append(slot);
   }
@@ -15685,10 +15691,10 @@ function renderTags(ctx) {
   if (!run) return;
   const tags = [];
   const cap = run.skillCap || 1;
-  const nextSlot = BAL.skillSlots.find((stage) => stage.depth > run.depth);
+  const nextSlot = BAL.skillSlots.find((stage) => stage.level > run.level);
   tags.push(h('span', {
     class: 'tag subtle',
-    'aria-label': nextSlot ? `深度 ${nextSlot.depth} 解锁第 ${nextSlot.slots} 个技能槽` : '技能槽已全部解锁'
+    'aria-label': nextSlot ? `等级 ${nextSlot.level} 解锁第 ${nextSlot.slots} 个技能槽` : '技能槽已全部解锁'
   }, `技能 ${run.abilities.length}/${cap}`));
   if ((run.fusions || []).length) tags.push(h('span', { class: 'tag hot' }, `合成 ×${run.fusions.length}`));
   clear(delveEls.tags).append(...tags);
