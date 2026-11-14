@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:35:20.065Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:37:59.756Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -8959,9 +8959,11 @@ function updatePlayerProjectiles(run, dt, events) {
     }
     projectile.life -= dt;
     if (projectile.life <= 0) continue;
+    // 环绕类弹幕以玩家为圆心，贴边时允许短时间在场地外继续绕行。
     if (
-      projectile.x < -40 || projectile.x > run.arena.w + 40 ||
-      projectile.y < -40 || projectile.y > run.arena.h + 40
+      !projectile.orbitRadius &&
+      (projectile.x < -40 || projectile.x > run.arena.w + 40 ||
+       projectile.y < -40 || projectile.y > run.arena.h + 40)
     ) {
       projectile.life = 0;
       continue;
