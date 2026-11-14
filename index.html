@@ -6052,11 +6052,6 @@ body.reduce-motion *::after {
         <button class="tab" data-tab="codex"><span>图鉴</span></button>
       </nav>
       <div class="resources">
-        <div class="res ember" id="res-ember" title="魂火：熔铸余烬祭坛">
-          <span class="res-glyph">✦</span>
-          <span class="res-value" id="ember-value">0</span>
-          <span class="res-label">魂火</span>
-        </div>
         <button class="icon-btn" id="btn-settings" aria-label="设置" title="设置">⚙</button>
       </div>
     </header>
@@ -6232,7 +6227,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:55:07.200Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:57:56.325Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -15802,10 +15797,8 @@ function renderIdle(ctx) {
   if (!delveEls.idle) return;
   showIdleView(ctx);
   const meta = ctx.meta;
-  const offlineRate = ctx.offlineRatePerHour();
-  const forgeLevels = Object.values(meta.forge || {}).reduce((a, b) => a + (b || 0), 0);
   const quick = meta.runs > 0
-    ? [`最高解锁 第 ${meta.maxLayer || 1} 层`, `累计下潜 ${fmtInt(meta.runs)} 次`, `击杀 ${fmtInt(meta.kills)}`, `祭坛 Lv.${forgeLevels}`]
+    ? [`最高解锁 第 ${meta.maxLayer || 1} 层`, `累计下潜 ${fmtInt(meta.runs)} 次`, `击杀 ${fmtInt(meta.kills)}`, `组合图鉴 ${COMBO_SHOP.length} 项`]
     : ['14 个主动技能', '一局最多 6 个', '43 节点只读星图', '组合无需购买'];
 
   const wrap = h('div', { class: 'idle-wrap' },
@@ -15833,8 +15826,8 @@ function renderIdle(ctx) {
     ),
     h('div', { class: 'idle-grid' },
       idleCard('HIGHEST LAYER', `第 ${meta.maxLayer || 1} 层`, `已通关 ${Math.max(0, (meta.maxLayer || 1) - 1)} 层`),
-      idleCard('SOULFIRE', fmtInt(meta.embers), '魂火 · 用于祭坛熔铸'),
-      idleCard('OFFLINE / HOUR', meta.maxLayer > 1 ? fmtInt(offlineRate) : '—', '离线魂火收益'),
+      idleCard('RUNS', fmtInt(meta.runs), '累计下潜'),
+      idleCard('KILLS', fmtInt(meta.kills), '累计击杀'),
     ),
     h('section', { class: 'panel idle-build' },
       h('div', { class: 'idle-build-head' },
@@ -16140,7 +16133,6 @@ function refreshRunPanels(ctx, full = false) {
   const info = [
     ['击杀', fmtInt(run.kills)],
     ['等级', `Lv.${run.level}`],
-    ['预计魂火', h('b', { class: 'ember-text' }, `+${fmtInt(emberPreview(run))}`)],
     ['深渊压力', `×${abyssPressure(run).toFixed(2)}`],
     ['用时', fmtTime(run.elapsed)]
   ];
@@ -16177,7 +16169,6 @@ function refreshRunPanels(ctx, full = false) {
   if (stats.basicSplash > 0) rows.push(['普攻爆炸', `${Math.round(stats.basicSplash)} 范围`]);
   if (stats.cdr > 0) rows.push(['冷却缩减', fmtPct(stats.cdr)]);
   if (stats.reactionDmgPct > 0) rows.push(['反应增伤', fmtPct(stats.reactionDmgPct)]);
-  if (stats.emberGain > 0) rows.push(['魂火加成', fmtPct(stats.emberGain)]);
   clear(delveEls.statList).append(
     ...rows.map(([label, value]) => h('div', { class: 'stat-row' }, h('span', {}, label), h('b', {}, value)))
   );
@@ -16430,7 +16421,6 @@ function guideSection() {
     ['融合共鸣', '每对技能对应一个融合形态，需双方各 4 点共鸣且都点亮进阶；融合卡进入三选一，融合后只占一个技能格并保留组件共鸣。'],
     ['元素印记', '火 / 冰 / 雷 / 虚技能命中会留下元素印记。两个不同元素相遇触发蒸发、超载、超导、燃魂、湮灭或雷暴。'],
     ['层 = 一局', '每层是独立一局：从主页选层进入，连续刷怪，击败本层 Boss 后通关并解锁下一层。'],
-    ['魂火与祭坛', '死亡或主动撤退都会结算魂火，用于余烬祭坛永久强化。组合图鉴不消耗魂火，也不写解锁存档。'],
     ['自动战斗', '开启「自动」后 AI 会走位、放技能、选卡并继续下一局；停滞 100 秒自动撤退。手动模式可用 1–6 或技能详情面板施法。']
   ];
   return section('玩法指南', 'V4 · HOW TO MOW DOWN THE ABYSS',
@@ -16643,9 +16633,7 @@ function statsSection(ctx) {
     ['RUNS', fmtInt(meta.runs), '累计下潜'],
     ['KILLS', fmtInt(meta.kills), '累计击杀'],
     ['PLAY TIME', fmtTime(meta.playSeconds, { short: true }), '游戏时长'],
-    ['SOULFIRE', fmtInt(meta.totalEmbers), '累计获得魂火'],
     ['COMBOS', `${comboOwned} / ${COMBO_SHOP.length}`, '组合技解锁'],
-    ['FORGE', `Lv.${forgeTotalLevel(meta)}`, '祭坛总等级']
   ];
   return section('统计', 'THE RECORD OF DESCENT',
     h('div', { class: 'stats-table' },
@@ -17603,10 +17591,6 @@ function buildReport(ctx, spec) {
       reportCell('用时', fmtTime(report.elapsed)),
       reportCell('本局新纪录', report.newBest ? '是' : '—')
     ),
-    h('div', { class: 'report-ember' },
-      h('span', {}, '带回魂火'),
-      h('b', {}, `+${fmtInt(report.embers)}`)
-    ),
     report.relicIds && report.relicIds.length
       ? h('div', { class: 'report-relics' },
         report.relicIds.map((id) => {
@@ -17682,7 +17666,6 @@ function buildTutorial(ctx) {
     ['层 = 一局', '每层是独立一局：主页选层，连续刷怪，击败本层 Boss 后通关并解锁下一层；每局两次商店，每次可免费选择一件。'],
     ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
     ['组合无需购买', '每个技能只有一个唯一搭档。进阶共鸣双方各 3 点；融合共鸣需双方各 4 点且都点亮进阶，融合后只占一个技能格。'],
-    ['带回魂火', '死亡或主动撤退都会结算魂火。魂火用于余烬祭坛的永久强化。'],
     ['自动战斗', '开启「自动」后 AI 会走位、放技能、选卡并在死亡后继续下一局。也可只关闭自动弹幕，用 1–6 或技能详情面板手动施法。']
   ];
   const modal = h('div', { class: 'modal narrow' });
@@ -17845,7 +17828,6 @@ function createApp() {
     autoNextAt: 0,
     wasRunActive: !!run,
     lastAutoSave: 0,
-    lastEmber: meta.embers,
   };
 
   const ctx = {
@@ -17871,9 +17853,6 @@ function createApp() {
     },
     refreshHeader() {
       refreshHeader();
-    },
-    offlineRatePerHour() {
-      return offlineRatePerHour(meta);
     },
     banner,
     startRun(silent = false) {
@@ -17906,7 +17885,7 @@ function createApp() {
       if (!run || !run.active) return;
       openConfirm(ctx, {
         title: '撤退',
-        message: `结束本次下潜，带着 <b>${fmtInt(emberPreview(run))}</b> 魂火返回。确定撤退吗？`,
+        message: '结束本次下潜并返回主页。确定撤退吗？',
         confirmText: '确定撤退',
         danger: true,
         onConfirm: () => {
@@ -18070,17 +18049,6 @@ function createApp() {
       }
       save();
     },
-    buyForge(trackId) {
-      const result = buyForge(meta, trackId);
-      if (!result.ok) {
-        play('error');
-        ctx.toast(result.reason || '魂火不足', 'error');
-        return;
-      }
-      play('buy');
-      refreshHeader();
-      ctx.save();
-    },
     exportSave() {
       const code = exportSave(meta);
       const box = document.getElementById('save-code');
@@ -18124,7 +18092,7 @@ function createApp() {
     resetGame() {
       openConfirm(ctx, {
         title: '重置游戏',
-        message: '删除全部进度：魂火、祭坛、纪录与存档。<br>此操作不可撤销。',
+        message: '删除全部进度：最高解锁层、纪录与存档。<br>此操作不可撤销。',
         confirmText: '彻底重置',
         danger: true,
         onConfirm: () => {
@@ -18155,10 +18123,8 @@ function createApp() {
   bindKeyboard();
   document.getElementById('btn-skill-tree')?.addEventListener('click', () => ctx.toggleSkillTree());
 
-  let offlineGain = null;
   if (!run) {
-    offlineGain = applyOffline(meta, Date.now());
-    if (offlineGain) {
+    if (false) {
       meta.lastSeen = Date.now();
       ctx.save();
     }
@@ -18177,8 +18143,6 @@ function createApp() {
   }
   if (fresh && !meta.settings.tutorialSeen) {
     setTimeout(() => openTutorial(ctx), 520);
-  } else if (offlineGain) {
-    setTimeout(() => openOffline(ctx, offlineGain), 420);
   }
 
   let lastTick = performance.now();
@@ -18346,15 +18310,6 @@ function createApp() {
   }
 
   function refreshHeader() {
-    const emberEl = document.getElementById('ember-value');
-    const emberChip = document.getElementById('res-ember');
-    if (emberEl) emberEl.textContent = fmtInt(meta.embers);
-    if (meta.embers > ui.lastEmber && emberChip) {
-      emberChip.classList.remove('is-gain');
-      void emberChip.offsetWidth;
-      emberChip.classList.add('is-gain');
-    }
-    ui.lastEmber = meta.embers;
     document.title = run ? `第 ${run.depth} 层 · 烬渊` : '烬渊 · EMBERFALL';
   }
 
