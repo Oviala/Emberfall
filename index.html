@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T00:36:39.303Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T00:40:30.568Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -7260,8 +7260,8 @@ const LAYER_SKILLS = [
   },
   {
     id: 'mirror', name: '镜返', glyph: '镜', cd: 6.5, role: 'normal', behavior: 'mirrorStance',
-    element: 'void', color: '#9fd8ff', type: '层专属 · 反制', minLayer: 3,
-    desc: (ap) => `展开 1.5 秒镜面，清空附近敌方子弹并反射为 6 枚星弹，每枚 ${Math.round(70 * ap)}%。`,
+    element: 'void', color: '#9fd8ff', type: '层专属 · 反弹', minLayer: 3,
+    desc: () => `展开 1.5 秒镜面；碰到你的敌方子弹会被原路反弹，造成原伤害 200% 的星弹。`,
     flavor: '打回来的东西，通常更疼。'
   },
   {
@@ -7296,8 +7296,8 @@ const LAYER_SKILLS = [
   },
   {
     id: 'shadow', name: '影分身', glyph: '影', cd: 11, role: 'heavy', behavior: 'shadowClone',
-    element: 'void', color: '#b48cff', type: '层专属 · 分身', minLayer: 9,
-    desc: (ap) => `分裂出一个持续 5 秒的影子，自动向敌人射击，造成 ${Math.round(38 * ap)}% 伤害。`,
+    element: 'void', color: '#b48cff', type: '层专属 · 影袭', minLayer: 9,
+    desc: (ap) => `影子跟随你 5 秒；期间你的每次普攻都会从侧后方追加一枚影子弹，造成 ${Math.round(38 * ap)}% 伤害。`,
     flavor: '影子不需要你同意。'
   }
 ];
@@ -8084,6 +8084,9 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     decoys: [],
     walls: [],
     mirrorUntil: 0,
+    shadowUntil: 0,
+    shadowDmg: 0,
+    shadowSide: 1,
     timeStop: 0,
     shopRerolls: 0,
     paidRerolls: 0,
@@ -9020,8 +9023,16 @@ function updateEnemyShots(run, dt, events) {
       if (distance(shot.x, shot.y, wall.x, wall.y) <= wall.radius) shot.life = 0;
     }
     if (shot.life <= 0) continue;
-    if (distance(shot.x, shot.y, run.player.x, run.player.y) <= run.player.radius + shot.radius) {
-      damagePlayer(run, shot.dmg, events, { source: 'projectile' });
+    if (distance(shot.x, shot.y, run.player.x, run.player.y) <= run.player.radius + shot.radius + ((run.mirrorUntil || 0) > run.elapsed ? 20 : 0)) {
+      if ((run.mirrorUntil || 0) > run.elapsed) {
+        spawnAbilityBullet(run, {
+          x: run.player.x, y: run.player.y, vx: -shot.vx * 1.15, vy: -shot.vy * 1.15,
+          dmg: shot.dmg * 2, radius: 6, life: 1.8, color: '#9fd8ff', kind: 'mirror', pierce: 2
+        });
+        pushEvent(events, { type: 'ring', x: run.player.x, y: run.player.y, radius: 46, color: '#9fd8ff' });
+      } else {
+        damagePlayer(run, shot.dmg, events, { source: 'projectile' });
+      }
       shot.life = 0;
     }
   }
@@ -9316,6 +9327,19 @@ function firePlayerAttack(run, events) {
   if (run._rng.chance(run.stats.multi)) {
     const second = nearestEnemy(run, BAL.player.attackRange, target.id) || target;
     firePlayerProjectile(run, second);
+  }
+  // 影分身：跟随玩家，复制每一次普攻，从侧后方追加一枚影子弹。
+  if ((run.shadowUntil || 0) > run.elapsed) {
+    const angle = Math.atan2(target.y - run.player.y, target.x - run.player.x);
+    const side = run.shadowSide || 1;
+    run.shadowSide = -side;
+    const ox = run.player.x + Math.cos(angle + side * Math.PI / 2) * 30;
+    const oy = run.player.y + Math.sin(angle + side * Math.PI / 2) * 30;
+    const shadowAngle = Math.atan2(target.y - oy, target.x - ox);
+    spawnAbilityBullet(run, {
+      x: ox, y: oy, vx: Math.cos(shadowAngle) * BAL.player.projectileSpeed, vy: Math.sin(shadowAngle) * BAL.player.projectileSpeed,
+      dmg: run.shadowDmg || run.stats.atk * 0.38, radius: 5, life: 1.3, color: '#b48cff', kind: 'shadow', pierce: 0
+    });
   }
   pushEvent(events, { type: 'shoot' });
 }
@@ -9836,10 +9860,7 @@ function castAbility(run, id) {
     pushEvent(events, { type: 'banner', title: '诱饵图腾', sub: 'TAUNT', tone: 'small' });
   } else if (behavior === 'mirrorStance') {
     run.mirrorUntil = run.elapsed + 1.5;
-    run.enemyShots = run.enemyShots.filter((shot) => distance(shot.x, shot.y, player.x, player.y) > 280);
-    fireFan(run, 6 + extra, 1.4, 520, {
-      dmg: attack * 0.7, radius: 6, life: 1.6, element: 'void', color: def.color, kind: 'shard', pierce: 1
-    });
+    pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 44, color: def.color });
   } else if (behavior === 'echoClone') {
     run.echoes.push({ x: player.x, y: player.y, life: 4, timer: 0, dmg: attack * 0.45, color: def.color, kind: 'echo' });
   } else if (behavior === 'gravityWell') {
@@ -9867,7 +9888,9 @@ function castAbility(run, id) {
     run.walls.push({ x: player.x, y: player.y, radius: 92, life: 4, color: def.color });
     pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 92, color: def.color });
   } else if (behavior === 'shadowClone') {
-    run.echoes.push({ x: player.x, y: player.y, life: 5, timer: 0, dmg: attack * 0.38, color: def.color, kind: 'shadow' });
+    run.shadowUntil = run.elapsed + 5;
+    run.shadowDmg = attack * 0.38;
+    pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 38, color: def.color });
   } else {
     return { ok: false, reason: '未知行为' };
   }
@@ -10571,6 +10594,9 @@ function hydrateRun(data) {
   run.decoys = run.decoys || [];
   run.walls = run.walls || [];
   run.mirrorUntil = run.mirrorUntil || 0;
+  run.shadowUntil = run.shadowUntil || 0;
+  run.shadowDmg = run.shadowDmg || 0;
+  run.shadowSide = run.shadowSide || 1;
   run.timeStop = run.timeStop || 0;
   run.waveSpawned = !!run.waveSpawned;
   run.bossWave = !!run.bossWave;
@@ -14587,6 +14613,7 @@ function renderArena(ctxApp, run, dt) {
   drawWalls(c, run);
   drawEchoes(c, run);
   drawDecoys(c, run);
+  drawShadowClone(c, run);
   drawEnemies(c, run);
   // Boss 美术模块可能改动变换/透明度；画完后强制恢复世界坐标，避免玩家被画到地图外。
   c.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
@@ -14669,6 +14696,29 @@ function drawZones(c, run) {
     }
     c.restore();
   }
+}
+
+function drawShadowClone(c, run) {
+  if (!((run.shadowUntil || 0) > run.elapsed)) return;
+  const p = run.player;
+  const angle = world.time * 1.7;
+  const x = p.x + Math.cos(angle) * 34;
+  const y = p.y + Math.sin(angle) * 34;
+  c.save();
+  c.globalAlpha = 0.6;
+  c.fillStyle = '#b48cff';
+  c.shadowColor = '#b48cff';
+  c.shadowBlur = 16;
+  c.beginPath();
+  c.arc(x, y, 12, 0, Math.PI * 2);
+  c.fill();
+  c.globalAlpha = 0.28;
+  c.strokeStyle = '#d9c2ff';
+  c.lineWidth = 1.4;
+  c.beginPath();
+  c.arc(x, y, 20, 0, Math.PI * 2);
+  c.stroke();
+  c.restore();
 }
 
 function drawDecoys(c, run) {
