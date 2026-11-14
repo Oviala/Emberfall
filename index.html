@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:59:34.190Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:03:41.067Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6298,8 +6298,8 @@ const BAL = {
     { level: 10, slots: 6 }
   ],
   enemy: {
-    hpBase: 26,
-    atkBase: 6.1,
+    hpBase: 30,
+    atkBase: 6.6,
     hpGrowth: 1.11,
     atkGrowth: 1.077,
     maxAliveBase: 16,
@@ -6310,14 +6310,14 @@ const BAL = {
     spawnDepthFactor: 0.018,
     spawnTimeFactor: 0.00018,
     batchFromDepth: 18,
-    eliteChanceBase: 0.03,
-    eliteChancePerDepth: 0.0025,
-    eliteChanceMax: 0.16,
+    eliteChanceBase: 0.055,
+    eliteChancePerDepth: 0.003,
+    eliteChanceMax: 0.22,
     eliteHp: 3.2,
     eliteAtk: 1.25,
     bossEvery: 10,
-    bossHpMult: 5.5,
-    bossAtkMult: 1.25,
+    bossHpMult: 14,
+    bossAtkMult: 1.4,
     bossRadius: 40,
     bossSpeed: 62,
     bossBurstInterval: 5.0,
@@ -9006,7 +9006,8 @@ function updateSpawning(run, dt, events) {
     return;
   }
   const batch = 1 + Math.floor(run.layer / 4);
-  const eliteChance = Math.min(e.eliteChanceMax, e.eliteChanceBase + run.layer * e.eliteChancePerDepth + (run.layerDef?.eliteBonus || 0));
+  const eliteRamp = 0.35 + 0.65 * Math.min(1, run.elapsed / 90);
+  const eliteChance = Math.min(e.eliteChanceMax, (e.eliteChanceBase + run.layer * e.eliteChancePerDepth + (run.layerDef?.eliteBonus || 0)) * eliteRamp);
   for (let i = 0; i < batch; i++) {
     const kind = run.layer >= 3 && run._rng.chance(eliteChance) ? 'elite' : 'normal';
     spawnEnemy(run, kind);
