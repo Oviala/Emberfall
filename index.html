@@ -6232,7 +6232,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:40:05.442Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:43:10.815Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6296,10 +6296,10 @@ const BAL = {
     atkBase: 6.6,
     hpGrowth: 1.11,
     atkGrowth: 1.077,
-    maxAliveBase: 16,
-    maxAlivePerDepth: 1.1,
-    maxAliveCap: 40,
-    spawnIntervalBase: 0.72,
+    maxAliveBase: 28,
+    maxAlivePerDepth: 1.9,
+    maxAliveCap: 70,
+    spawnIntervalBase: 0.6,
     spawnIntervalMin: 0.2,
     spawnDepthFactor: 0.018,
     spawnTimeFactor: 0.00018,
@@ -6316,8 +6316,8 @@ const BAL = {
     bossSpeed: 62,
     bossBurstInterval: 5.0,
     bossBurstCount: 7,
-    xpBase: 3.2,
-    xpPerDepth: 0.55,
+    xpBase: 1.6,
+    xpPerDepth: 0.28,
     goldBase: 1.2,
     goldPerDepth: 0.22,
     pressureStart: 150,
@@ -9002,7 +9002,7 @@ function updateSpawning(run, dt, events) {
   if (run.spawnTimer > 0) run.spawnTimer -= dt;
   if (run.spawnTimer > 0) return;
   const alive = run.enemies.filter((enemy) => !enemy.dead && !enemy.boss).length;
-  const maxAlive = Math.min(40, Math.floor(e.maxAliveBase + (run.layer - 1) * 1.2));
+  const maxAlive = Math.min(70, Math.floor(e.maxAliveBase + (run.layer - 1) * 1.9));
   if (alive >= maxAlive) {
     run.spawnTimer = 0.3;
     return;
