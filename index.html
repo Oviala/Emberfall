@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:37:59.756Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:41:31.805Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -10665,6 +10665,9 @@ function hydrateMeta(raw) {
   meta.stardust = safeNumber(meta.stardust);
   meta.bestDepth = safeNumber(meta.bestDepth);
   meta.allTimeBest = safeNumber(meta.allTimeBest);
+  // 层数进度：优先读 maxLayer；旧存档用历史最深兜底，避免更新后回到第 1 层。
+  const legacyLayer = Math.min(10, Math.max(1, meta.allTimeBest || meta.bestDepth || 1));
+  meta.maxLayer = Math.max(1, Math.min(10, safeNumber(meta.maxLayer) || legacyLayer));
   meta.allTimeBestRunEmbers = safeNumber(meta.allTimeBestRunEmbers);
   meta.ascensions = safeNumber(meta.ascensions);
   meta.runs = safeNumber(meta.runs);
@@ -15414,7 +15417,7 @@ function renderIdle(ctx) {
   const offlineRate = ctx.offlineRatePerHour();
   const forgeLevels = Object.values(meta.forge || {}).reduce((a, b) => a + (b || 0), 0);
   const quick = meta.runs > 0
-    ? [`累计下潜 ${fmtInt(meta.runs)} 次`, `击杀 ${fmtInt(meta.kills)}`, `组合图鉴 ${COMBO_SHOP.length} 项`, `祭坛 Lv.${forgeLevels}`]
+    ? [`最高解锁 第 ${meta.maxLayer || 1} 层`, `累计下潜 ${fmtInt(meta.runs)} 次`, `击杀 ${fmtInt(meta.kills)}`, `祭坛 Lv.${forgeLevels}`]
     : ['14 个主动技能', '一局最多 6 个', '43 节点只读星图', '组合无需购买'];
 
   const wrap = h('div', { class: 'idle-wrap' },
