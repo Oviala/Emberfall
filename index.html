@@ -6232,7 +6232,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:38:10.647Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:40:05.442Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -10892,6 +10892,9 @@ function hydrateMeta(raw) {
   // 层数进度：优先读 maxLayer；旧存档用历史最深兜底，避免更新后回到第 1 层。
   const legacyLayer = Math.min(10, Math.max(1, meta.allTimeBest || meta.bestDepth || 1));
   meta.maxLayer = Math.max(1, Math.min(10, safeNumber(meta.maxLayer) || legacyLayer));
+  // 旧版无限深度纪录迁移为最高解锁层，避免主页继续显示 32 层之类的旧数据。
+  meta.bestDepth = Math.min(Math.max(0, meta.bestDepth), meta.maxLayer);
+  meta.allTimeBest = Math.min(Math.max(0, meta.allTimeBest), meta.maxLayer);
   meta.allTimeBestRunEmbers = safeNumber(meta.allTimeBestRunEmbers);
   meta.ascensions = safeNumber(meta.ascensions);
   meta.runs = safeNumber(meta.runs);
@@ -15704,9 +15707,9 @@ function renderIdle(ctx) {
       h('div', { class: 'idle-quick' }, quick.map((text) => h('span', {}, text)))
     ),
     h('div', { class: 'idle-grid' },
-      idleCard('ALL-TIME BEST', meta.allTimeBest > 0 ? `${meta.allTimeBest} 层` : '—', `本轮最深 ${meta.bestDepth} 层`),
+      idleCard('HIGHEST LAYER', `第 ${meta.maxLayer || 1} 层`, `已通关 ${Math.max(0, (meta.maxLayer || 1) - 1)} 层`),
       idleCard('SOULFIRE', fmtInt(meta.embers), '魂火 · 用于祭坛熔铸'),
-      idleCard('OFFLINE / HOUR', meta.allTimeBest > 0 ? fmtInt(offlineRate) : '—', '离线魂火收益'),
+      idleCard('OFFLINE / HOUR', meta.maxLayer > 1 ? fmtInt(offlineRate) : '—', '离线魂火收益'),
     ),
     h('section', { class: 'panel idle-build' },
       h('div', { class: 'idle-build-head' },
@@ -16511,8 +16514,8 @@ function statsSection(ctx) {
   const meta = ctx.meta;
   const comboOwned = (meta.comboUnlocks || []).length;
   const cells = [
-    ['ALL-TIME BEST', `${meta.allTimeBest} 层`, '历史最深'],
-    ['CYCLE BEST', `${meta.bestDepth} 层`, '本轮最深'],
+    ['HIGHEST LAYER', `第 ${meta.maxLayer || 1} 层`, '最高解锁'],
+    ['CLEARED', `${Math.max(0, (meta.maxLayer || 1) - 1)} 层`, '已通关'],
     ['RUNS', fmtInt(meta.runs), '累计下潜'],
     ['KILLS', fmtInt(meta.kills), '累计击杀'],
     ['PLAY TIME', fmtTime(meta.playSeconds, { short: true }), '游戏时长'],
@@ -16595,7 +16598,7 @@ function renderCycle(ctx) {
   );
 
   const recordRows = [
-    ['全时最深', `${meta.allTimeBest} 层`, ''],
+    ['最高解锁层', `第 ${meta.maxLayer || 1} 层`, ''],
     ['单次最多魂火', fmtInt(meta.allTimeBestRunEmbers), ''],
     ['累计魂火', fmtInt(meta.totalEmbers), ''],
     ['游戏时长', fmtTime(meta.playSeconds, { short: true }), ''],
@@ -17544,7 +17547,7 @@ function buildOffline(ctx, spec) {
     ),
     h('div', { class: 'offline-meta' },
       h('span', {}, '每小时 ', h('b', {}, fmtInt(ctx.offlineRatePerHour()))),
-      h('span', {}, '历史最深 ', h('b', {}, `${meta.allTimeBest} 层`))
+      h('span', {}, '最高解锁 ', h('b', {}, `第 ${meta.maxLayer || 1} 层`))
     ),
     h('div', { class: 'modal-foot' },
       h('button', { class: 'btn btn-primary', onclick: () => closeModal(ctx) }, '收下')
