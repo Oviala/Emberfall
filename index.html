@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:41:31.805Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:48:48.445Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6302,11 +6302,11 @@ const BAL = {
     atkBase: 6.1,
     hpGrowth: 1.11,
     atkGrowth: 1.077,
-    maxAliveBase: 6,
+    maxAliveBase: 16,
     maxAlivePerDepth: 1.1,
     maxAliveCap: 40,
-    spawnIntervalBase: 1.2,
-    spawnIntervalMin: 0.24,
+    spawnIntervalBase: 0.72,
+    spawnIntervalMin: 0.2,
     spawnDepthFactor: 0.018,
     spawnTimeFactor: 0.00018,
     batchFromDepth: 18,
@@ -6316,8 +6316,8 @@ const BAL = {
     eliteHp: 3.2,
     eliteAtk: 1.25,
     bossEvery: 10,
-    bossHpMult: 4.5,
-    bossAtkMult: 1.12,
+    bossHpMult: 5.5,
+    bossAtkMult: 1.25,
     bossRadius: 40,
     bossSpeed: 62,
     bossBurstInterval: 5.0,
@@ -6345,11 +6345,11 @@ const BAL = {
     eliteFromLayer: 4
   },
   layers: {
-    bossAtBase: 420,
+    bossAtBase: 300,
     bossAtPerLayer: 60,
     shopAt: [0.55, 0.85],
     maxLayer: 10,
-    maxSlotsBase: 3,
+    maxSlotsBase: 4,
     maxSlotsPerLayers: 2
   },
   shop: {
@@ -8913,12 +8913,12 @@ function updateSpawning(run, dt, events) {
   if (run.spawnTimer > 0) run.spawnTimer -= dt;
   if (run.spawnTimer > 0) return;
   const alive = run.enemies.filter((enemy) => !enemy.dead && !enemy.boss).length;
-  const maxAlive = Math.min(24, Math.floor(e.maxAliveBase + (run.layer - 1) * 0.6));
+  const maxAlive = Math.min(40, Math.floor(e.maxAliveBase + (run.layer - 1) * 1.2));
   if (alive >= maxAlive) {
     run.spawnTimer = 0.3;
     return;
   }
-  const batch = 1 + Math.floor(run.layer / 8);
+  const batch = 1 + Math.floor(run.layer / 4);
   const eliteChance = Math.min(e.eliteChanceMax, e.eliteChanceBase + run.layer * e.eliteChancePerDepth + (run.layerDef?.eliteBonus || 0));
   for (let i = 0; i < batch; i++) {
     const kind = run.layer >= 3 && run._rng.chance(eliteChance) ? 'elite' : 'normal';
