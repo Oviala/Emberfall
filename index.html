@@ -6232,7 +6232,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:49:40.979Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:52:30.859Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -7252,8 +7252,8 @@ const LAYER_SKILLS = [
   },
   {
     id: 'echo', name: '回响替身', glyph: '响', cd: 9, role: 'normal', behavior: 'echoClone',
-    element: 'void', color: '#c9a7ff', type: '层专属 · 残影', minLayer: 4,
-    desc: (ap) => `留下一个残影，持续 4 秒自动向敌人射击；残影攻击造成 ${Math.round(45 * ap)}% 伤害。`,
+    element: 'void', color: '#c9a7ff', type: '层专属 · 替身复制', minLayer: 4,
+    desc: (ap) => `留下一个残影，持续 4 秒自动射击，并复制你释放的技能（不复制替身技能）；残影攻击造成 ${Math.round(35 * ap)}% 伤害。`,
     flavor: '你走了，但动作还留在原地。'
   },
   {
@@ -7282,8 +7282,8 @@ const LAYER_SKILLS = [
   },
   {
     id: 'shadow', name: '影分身', glyph: '影', cd: 11, role: 'heavy', behavior: 'shadowClone',
-    element: 'void', color: '#b48cff', type: '层专属 · 影袭', minLayer: 9,
-    desc: (ap) => `影子跟随你 5 秒；期间你的每次普攻都会从侧后方追加一枚影子弹，造成 ${Math.round(38 * ap)}% 伤害。`,
+    element: 'void', color: '#b48cff', type: '层专属 · 高伤复制', minLayer: 9,
+    desc: (ap) => `影子跟随你 5 秒，复制你的普攻和技能（不复制替身技能）；复制伤害比例高于回响替身，单次约 ${Math.round(55 * ap)}%。`,
     flavor: '影子不需要你同意。'
   }
 ];
@@ -8112,6 +8112,8 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     layerSkillIds: [],
     layerActiveSkillIds: [],
     echoes: [],
+    echoCopies: [],
+    shadowSkillTimer: 0,
     decoys: [],
     walls: [],
     mirrorUntil: 0,
@@ -9171,6 +9173,53 @@ function updateDecoys(run, dt, events) {
   run.decoys = run.decoys.filter((decoy) => decoy.life > 0);
 }
 
+function echoCopyAbility(run, source, abilityId, events, scale) {
+  const def = ALL_ABILITY_BY_ID[abilityId];
+  if (!def) return;
+  const target = nearestEnemyAt(run, source.x, source.y, 760);
+  const tx = target ? target.x : source.x;
+  const ty = target ? target.y : source.y;
+  const damage = (source.dmg || run.stats.atk * 0.35) * scale;
+  const color = def.color || '#c9a7ff';
+  const element = def.element || null;
+  const zoneLike = ['targetedMeteors', 'singularityZone', 'stormriftZone', 'icefireMeteors', 'starfallBarrage', 'bloodstarOrbit', 'thunderCage', 'iceNova', 'fusionBarrage'];
+  if (zoneLike.includes(def.behavior)) {
+    spawnZone(run, { kind: 'echoCopy', x: tx, y: ty, radius: 120, duration: 2.4, tickInterval: 0.45, dmg: damage * 1.8, element, color });
+    aoeDamage(run, tx, ty, 120, damage * 1.2, events, { element, color, quiet: true });
+  } else if (def.behavior === 'orbitShield' || def.behavior === 'bloodOrbit') {
+    for (let i = 0; i < 4; i++) {
+      spawnAbilityBullet(run, {
+        x: source.x, y: source.y, vx: Math.cos((Math.PI * 2 * i) / 4) * 220, vy: Math.sin((Math.PI * 2 * i) / 4) * 220,
+        dmg: damage * 1.4, radius: 6, life: 2.2, color, kind: 'echoSkill', pierce: 999
+      });
+    }
+  } else {
+    const angle = Math.atan2(ty - source.y, tx - source.x);
+    for (let i = -1; i <= 1; i++) {
+      spawnAbilityBullet(run, {
+        x: source.x, y: source.y, vx: Math.cos(angle + i * 0.18) * 500, vy: Math.sin(angle + i * 0.18) * 500,
+        dmg: damage, radius: 5, life: 1.5, element, color, kind: 'echoSkill', pierce: 1
+      });
+    }
+  }
+  pushEvent(events, { type: 'echoSkill', id: abilityId, x: source.x, y: source.y, color });
+}
+
+function updateEchoCopies(run, dt, events) {
+  if (!run.echoCopies || !run.echoCopies.length) return;
+  run.echoCopies = run.echoCopies.filter((copy) => {
+    copy.delay -= dt;
+    if (copy.delay > 0) return true;
+    for (const echo of run.echoes || []) {
+      if (echo.life > 0) echoCopyAbility(run, echo, copy.id, events, 0.72);
+    }
+    if ((run.shadowUntil || 0) > run.elapsed) {
+      echoCopyAbility(run, { x: run.player.x, y: run.player.y, dmg: run.shadowDmg }, copy.id, events, 1);
+    }
+    return false;
+  });
+}
+
 function updateWalls(run, dt, events) {
   if (!run.walls || !run.walls.length) return;
   for (const wall of run.walls) {
@@ -10045,7 +10094,7 @@ function castAbility(run, id) {
     run.mirrorUntil = run.elapsed + 2.0 + 0.35 * skillTraitLevel(run, 'mirror', 'duration');
     pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 44, color: def.color });
   } else if (behavior === 'echoClone') {
-    run.echoes.push({ x: player.x, y: player.y, life: 4 + skillTraitLevel(run, 'echo', 'duration'), timer: 0, rate: 0.42 * (1 - 0.2 * skillTraitLevel(run, 'echo', 'rate')), dmg: attack * 0.45 * (1 + 0.25 * skillTraitLevel(run, 'echo', 'damage')), color: def.color, kind: 'echo' });
+    run.echoes.push({ x: player.x, y: player.y, life: 4 + skillTraitLevel(run, 'echo', 'duration'), timer: 0, rate: 0.42 * (1 - 0.2 * skillTraitLevel(run, 'echo', 'rate')), dmg: attack * 0.35 * (1 + 0.25 * skillTraitLevel(run, 'echo', 'damage')), color: def.color, kind: 'echo' });
   } else if (behavior === 'gravityWell') {
     spawnZone(run, {
       kind: 'gravity', x: tx, y: ty, radius: 150 * (1 + 0.25 * skillTraitLevel(run, 'gravity', 'radius')), duration: 3 + skillTraitLevel(run, 'gravity', 'duration'),
@@ -10076,7 +10125,8 @@ function castAbility(run, id) {
     pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 92, color: def.color });
   } else if (behavior === 'shadowClone') {
     run.shadowUntil = run.elapsed + 5 + skillTraitLevel(run, 'shadow', 'duration');
-    run.shadowDmg = attack * 0.38 * (1 + 0.15 * skillTraitLevel(run, 'shadow', 'damage'));
+    run.shadowDmg = attack * 0.55 * (1 + 0.15 * skillTraitLevel(run, 'shadow', 'damage'));
+    run.shadowSkillTimer = 0;
     pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 38, color: def.color });
   } else if (behavior === 'fusionBarrage') {
     fireFan(run, 8 + extra, 1.35, 620, {
@@ -10087,6 +10137,11 @@ function castAbility(run, id) {
     return { ok: false, reason: '未知行为' };
   }
 
+  // 替身类复制玩家刚刚释放的技能（排除替身技能自身）。
+  if (id !== 'echo' && id !== 'shadow' && ((run.echoes || []).length || (run.shadowUntil || 0) > run.elapsed)) {
+    run.echoCopies = run.echoCopies || [];
+    run.echoCopies.push({ id, delay: 0.24 });
+  }
   pushEvent(events, {
     type: 'ability', id, name: def.name, glyph: def.glyph, color: def.color,
     element, x: player.x, y: player.y
@@ -10495,6 +10550,7 @@ function stepRun(run, dt = STEP) {
 
   updateSpawning(run, step, events);
   updateEchoes(run, step, events);
+  updateEchoCopies(run, step, events);
   updateWalls(run, step, events);
   updateDecoys(run, step, events);
   if (run.timeStop > 0) run.timeStop = Math.max(0, run.timeStop - step);
@@ -10803,6 +10859,8 @@ function hydrateRun(data) {
   run.layerSkillIds = run.layerSkillIds || [];
   run.layerActiveSkillIds = [];
   run.echoes = run.echoes || [];
+  run.echoCopies = run.echoCopies || [];
+  run.shadowSkillTimer = run.shadowSkillTimer || 0;
   run.decoys = run.decoys || [];
   run.walls = run.walls || [];
   run.mirrorUntil = run.mirrorUntil || 0;
