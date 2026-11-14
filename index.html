@@ -6232,7 +6232,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:43:10.815Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:47:50.167Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6318,8 +6318,6 @@ const BAL = {
     bossBurstCount: 7,
     xpBase: 1.6,
     xpPerDepth: 0.28,
-    goldBase: 1.2,
-    goldPerDepth: 0.22,
     pressureStart: 150,
     pressurePerMinute: 0.16
   },
@@ -6379,7 +6377,6 @@ const BAL = {
     depthScale: 1.2,
     depthLinear: 1.0,
     deathFactor: 0.9,
-    goldDivisor: 70
   },
   prestige: {
     baseDepth: 30,
@@ -6558,12 +6555,10 @@ const STATS = {
   basicPierce: { label: '普攻穿透', fmt: 'int' },
   basicSplash: { label: '普攻爆炸范围', fmt: 'flat' },
   emberGainPct: { label: '魂火获取', fmt: 'pct' },
-  goldGainPct: { label: '金币获取', fmt: 'pct' },
   xpGainPct: { label: '经验获取', fmt: 'pct' },
   offlinePct: { label: '离线收益', fmt: 'pct' },
   offlineCapH: { label: '离线上限', fmt: 'hours' },
   rerollBonus: { label: '重抽次数', fmt: 'int' },
-  startGold: { label: '初始金币', fmt: 'int' },
   solarPct: { label: '日冕爆发伤害', fmt: 'pct' },
   lastStandPct: { label: '背水增伤', fmt: 'pct' }
 };
@@ -6731,7 +6726,7 @@ const BRANCHES = [
     en: 'VOID',
     glyph: '虚',
     color: '#b48cff',
-    desc: '向深渊收税。魂火、金币、经验与离线收益。'
+    desc: '向深渊收税。魂火、经验与离线收益。'
   },
   {
     id: 'arcana',
@@ -6857,11 +6852,11 @@ const TREE_NODES = [
   // ───────────────────────── 虚空 ─────────────────────────
   n('void', 'void_whisper', '虚空低语', '语', 0, 150, 980, 3, [], { emberGainPct: 0.08 },
     '深渊在你耳边报出价码。'),
-  n('void', 'greed', '贪婪', '贪', 1, 75, 845, 3, ['void_whisper'], { goldGainPct: 0.15 },
+  n('void', 'greed', '贪婪', '贪', 1, 75, 845, 3, ['void_whisper'], { emberGainPct: 0.08 },
     '钱不会咬人，深渊会。'),
   n('void', 'insight', '洞察', '洞', 1, 225, 845, 3, ['void_whisper'], { xpGainPct: 0.1 },
     '看懂规则的人先赢一半。'),
-  n('void', 'midas', '点金', '金', 2, 45, 710, 3, ['greed'], { goldGainPct: 0.25 },
+  n('void', 'midas', '点金', '金', 2, 45, 710, 3, ['greed'], { emberGainPct: 0.12 },
     '连尘埃都能卖出价钱。'),
   n('void', 'hunter', '猎魂', '猎', 2, 115, 710, 2, ['greed'], { bossDmgPct: 0.15 },
     '越大越值钱。'),
@@ -6871,7 +6866,7 @@ const TREE_NODES = [
     '余烬在空腔里反复鸣响。'),
   n('void', 'deep_vision', '深视', '视', 3, 45, 575, 2, ['midas', 'hunter'], { emberGainPct: 0.12, rerollBonus: 1, pickupRadius: 20 },
     '看得越深，付得越少。'),
-  n('void', 'prospector', '探矿', '矿', 3, 115, 575, 2, ['hunter'], { emberGainPct: 0.1, goldGainPct: 0.2, pickupRadius: 15 },
+  n('void', 'prospector', '探矿', '矿', 3, 115, 575, 2, ['hunter'], { emberGainPct: 0.18, pickupRadius: 15 },
     '深渊底下埋着更好的东西。'),
   n('void', 'void_pact', '虚空契', '契', 3, 185, 575, 1, ['scholar'], { startGold: 40, startShieldPct: 0.05 },
     '签字的时候，笔尖在发抖。'),
@@ -7018,7 +7013,7 @@ const CARDS = [
   { id: 'c_sharp', name: '锐利', glyph: '锐', rarity: 'common', effects: { critChance: 0.05 }, flavor: '磨刀不误砍怪工。' },
   { id: 'c_armor', name: '硬甲', glyph: '甲', rarity: 'common', effects: { armorFlat: 10 }, flavor: '铁片也有大用处。' },
   { id: 'c_regen', name: '回春', glyph: '春', rarity: 'common', effects: { regenPct: 0.004 }, flavor: '伤口边缘长出苔藓。' },
-  { id: 'c_greed', name: '贪婪', glyph: '贪', rarity: 'common', effects: { goldGainPct: 0.2 }, flavor: '深渊从不缺金币，只缺胆量。' },
+  { id: 'c_greed', name: '贪婪', glyph: '贪', rarity: 'common', effects: { emberGainPct: 0.1 }, flavor: '深渊从不缺魂火，只缺胆量。' },
   { id: 'c_lore', name: '求知', glyph: '知', rarity: 'common', effects: { xpGainPct: 0.15 }, flavor: '读得越多，死得越明白。' },
   { id: 'c_warmth', name: '余温', glyph: '温', rarity: 'common', effects: { emberGainPct: 0.08 }, flavor: '灰烬里还能再捡出一点火。' },
   { id: 'c_light', name: '轻捷', glyph: '轻', rarity: 'common', effects: { dodgePct: 0.03 }, flavor: '不挨打，就是最好的防御。' },
@@ -7085,7 +7080,7 @@ const CARDS = [
   // ── 禁忌 ──
   { id: 'x_pact', name: '诅咒契约', glyph: '契', rarity: 'cursed', effects: { dmgPct: 0.7, maxHpPct: -0.2 }, flavor: '签名用的不是墨水。' },
   { id: 'x_allin', name: '孤注一掷', glyph: '注', rarity: 'cursed', effects: { critChance: 0.2, critDmgPct: 0.8, maxHpPct: -0.25 }, flavor: '要么暴击，要么暴毙。' },
-  { id: 'x_greed', name: '贪婪之罪', glyph: '罪', rarity: 'cursed', effects: { goldGainPct: 1.0, dmgPct: -0.1 }, flavor: '金币压得你抬不起刀。' },
+  { id: 'x_greed', name: '贪婪之罪', glyph: '罪', rarity: 'cursed', effects: { emberGainPct: 0.2, dmgPct: -0.1 }, flavor: '魂火压得你抬不起刀。' },
   { id: 'x_debt', name: '时间债务', glyph: '债', rarity: 'cursed', effects: { atkSpeedPct: 0.25, maxHpPct: -0.15 }, flavor: '向未来借了几秒钟。' },
   { id: 'x_blood', name: '血之献祭', glyph: '祭', rarity: 'cursed', effects: { lifestealPct: 0.2, maxHpPct: -0.12 }, flavor: '用生命换一点回血，很公平。' },
   { id: 'x_gaze', name: '虚空凝视', glyph: '视', rarity: 'cursed', effects: { emberGainPct: 0.3, maxHpPct: -0.1 }, flavor: '深渊也正看着你。' },
@@ -7112,7 +7107,7 @@ const RELICS = [
   { id: 'cold_iron', name: '寒铁护符', glyph: '铁', effects: { armorFlat: 18 }, flavor: '握久了手会失去知觉。' },
   { id: 'blood_pact', name: '血契徽记', glyph: '契', effects: { lifestealPct: 0.1 }, flavor: '每一滴血都记在账上。' },
   { id: 'sands', name: '时之沙漏', glyph: '沙', effects: { atkSpeedPct: 0.15 }, flavor: '沙子倒流的时候，你在笑。' },
-  { id: 'greed_eye', name: '贪婪之眼', glyph: '眼', effects: { goldGainPct: 0.5, pickupRadius: 40 }, flavor: '它只对闪亮的东西眨眼。' },
+  { id: 'greed_eye', name: '贪婪之眼', glyph: '眼', effects: { emberGainPct: 0.12, pickupRadius: 40 }, flavor: '它只对闪亮的东西眨眼。' },
   { id: 'ember_heart', name: '余烬之心', glyph: '心', effects: { ultChargePct: 0.3 }, flavor: '烧不完的，才是心。' },
   { id: 'thorn_crown', name: '荆棘王冠', glyph: '冠', effects: { thornsPct: 0.35 }, flavor: '戴上它的人，脖子都不太好。' },
   { id: 'void_prism', name: '虚空棱镜', glyph: '棱', effects: { multiPct: 0.1 }, flavor: '一次挥砍，被折成两次。' },
@@ -7212,7 +7207,6 @@ function deriveStats(mods, meta) {
     basicPierce: Math.floor(Math.max(0, s.basicPierce || 0)),
     basicSplash: Math.max(0, s.basicSplash || 0),
     emberGain: s.emberGainPct || 0,
-    goldGain: 1 + (s.goldGainPct || 0),
     xpGain: 1 + (s.xpGainPct || 0),
     offline: s.offlinePct || 0,
     offlineCapH: s.offlineCapH || 0,
@@ -8148,7 +8142,6 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     maxSkillSlots: maxSkillSlotsAt(layer),
     skillCap: Math.min(skillSlotsAt(1), maxSkillSlotsAt(layer)),
     kills: 0,
-    gold: 0,
     xp: 0,
     level: 1,
     xpNext: xpToNext(1),
@@ -8212,7 +8205,6 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
   recomputeStats(run);
   run.hp = run.maxHp;
   run.shield = Math.min(run.stats.shieldCap, run.maxHp * run.stats.startShieldPct);
-  run.gold = run.stats.startGold;
   run.freeRerolls = BAL.draft.freeRerolls + run.stats.rerollBonus;
   run.shopMilestones = BAL.layers.shopAt.map((ratio) => Math.round(run.bossAt * ratio));
   pushLog(run, `第 ${layer} 层 · ${zoneName(layer)} · 深渊开始`);
@@ -8522,7 +8514,6 @@ function makeEnemy(run, rng, kind, arch, x, y) {
   let armor = arch.armor;
   let speed = arch.speed * (1 + Math.min(0.3, depth * 0.0035)) * (run.layerDef?.enemySpeed || 1);
   let xp = e.xpBase + depth * e.xpPerDepth;
-  let gold = e.goldBase + depth * e.goldPerDepth;
   const boss = kind === 'boss';
   const elite = kind === 'elite';
   if (elite) {
@@ -8533,7 +8524,6 @@ function makeEnemy(run, rng, kind, arch, x, y) {
     armor += 6;
     speed *= 0.98;
     xp *= 3;
-    gold *= 3;
   }
   if (!boss) {
     // 高血量 / 高护甲的怪额外减速，避免“又硬又追得快”。
@@ -8552,7 +8542,6 @@ function makeEnemy(run, rng, kind, arch, x, y) {
     armor = 10 + index * 4;
     speed = e.bossSpeed;
     xp *= 9;
-    gold *= 12;
   }
   return {
     id: run.nextId++,
@@ -8570,7 +8559,6 @@ function makeEnemy(run, rng, kind, arch, x, y) {
     hp,
     maxHp: hp,
     xp,
-    gold,
     atk,
     speed,
     radius,
@@ -8878,7 +8866,6 @@ function killEnemy(run, enemy, events) {
   enemy.hp = 0;
   run.kills += 1;
   const stats = run.stats;
-  run.gold += Math.floor(enemy.gold * stats.goldGain);
   addUltCharge(run, BAL.ult.perKill * stats.ultCharge);
   run.orbs.push({
     id: run.nextId++,
@@ -10331,18 +10318,7 @@ function rerollDraft(run) {
     run.draft.choices = rollDraft(run);
     return { ok: true, free: true, left: run.freeRerolls };
   }
-  const paid = run.paidRerolls || 0;
-  if (paid >= BAL.draft.maxPaidRerolls) {
-    return { ok: false, reason: '本局刷新次数已用完' };
-  }
-  const cost = BAL.draft.paidRerollCost;
-  if (run.gold < cost) {
-    return { ok: false, reason: '金币不足', cost, gold: run.gold };
-  }
-  run.gold -= cost;
-  run.paidRerolls = paid + 1;
-  run.draft.choices = rollDraft(run);
-  return { ok: true, free: false, left: BAL.draft.maxPaidRerolls - run.paidRerolls, cost };
+  return { ok: false, reason: '本局刷新次数已用完' };
 }
 
 function openLayerShop(run, events = []) {
@@ -10359,7 +10335,7 @@ function openLayerShop(run, events = []) {
     offers.push({
       kind: 'card', id: card.id, name: card.name, glyph: card.glyph,
       desc: effectLines(card.effects, 1).map((line) => line.text).join(' · '),
-      cost: BAL.shop.cardCost[card.rarity] || 50, sold: false
+      cost: 0, sold: false
     });
   }
   const relicPool = RELICS.filter((relic) => !(run.relicIds || []).includes(relic.id));
@@ -10368,7 +10344,7 @@ function openLayerShop(run, events = []) {
     offers.push({
       kind: 'relic', id: relic.id, name: relic.name, glyph: relic.glyph,
       desc: effectLines(relic.effects, 1).map((line) => line.text).join(' · '),
-      cost: BAL.shop.relicCost, sold: false
+      cost: 0, sold: false
     });
   }
   run.shopBought = false;
@@ -10382,9 +10358,6 @@ function buyShopItem(run, index) {
   if (!offer) return { ok: false, reason: '商品不存在' };
   if (offer.sold) return { ok: false, reason: '已售出' };
   if (run.shopBought) return { ok: false, reason: '本商店已购买过' };
-  const price = Math.round(offer.cost * (1 + Math.max(0, run.layer - 1) * 0.18));
-  if (run.gold < price) return { ok: false, reason: '金币不足' };
-  run.gold -= price;
   run.shopBought = true;
   offer.sold = true;
   if (offer.kind === 'card') {
@@ -10550,14 +10523,13 @@ function stepRun(run, dt = STEP) {
 
 function emberPreview(run) {
   const base = emberReward(run.depth, run.stats ? run.stats.emberGain : 0, run.stardust, false);
-  return base + Math.floor(run.gold / BAL.ember.goldDivisor);
+  return base;
 }
 
 function finishRun(meta, run, { died = false, victory = false } = {}) {
   if (run.ended && run.report) return run.report;
   const base = emberReward(run.depth, run.stats ? run.stats.emberGain : 0, run.stardust, died);
-  const goldEmbers = Math.floor(run.gold / BAL.ember.goldDivisor);
-  const embers = base + goldEmbers;
+  const embers = base;
   meta.embers += embers;
   meta.totalEmbers += embers;
   meta.runs += 1;
@@ -10576,10 +10548,8 @@ function finishRun(meta, run, { died = false, victory = false } = {}) {
     layer,
     victory,
     kills: run.kills,
-    gold: run.gold,
     embers,
     baseEmbers: base,
-    goldEmbers,
     died,
     level: run.level,
     elapsed: run.elapsed,
@@ -10624,12 +10594,10 @@ const AUTO_SCORE = {
   shieldDmgPct: 8,
   reactionDmgPct: 10,
   emberGainPct: 12,
-  goldGainPct: 1.2,
   xpGainPct: 2,
   offlinePct: 0.5,
   offlineCapH: 0.5,
   rerollBonus: 2,
-  startGold: 0.2,
   solarPct: 0.4,
   lastStandPct: 4,
   unlock: 22,
@@ -16014,7 +15982,6 @@ function refreshRunPanels(ctx, full = false) {
   const stats = run.stats;
   const info = [
     ['击杀', fmtInt(run.kills)],
-    ['金币', fmtInt(run.gold)],
     ['等级', `Lv.${run.level}`],
     ['预计魂火', h('b', { class: 'ember-text' }, `+${fmtInt(emberPreview(run))}`)],
     ['深渊压力', `×${abyssPressure(run).toFixed(2)}`],
@@ -16352,7 +16319,7 @@ function elementSection() {
 
 function synergySection(ctx) {
   const ownedCombos = new Set((ctx.meta.comboUnlocks || []));
-  return section('技能共鸣', '同时拥有两个技能时生效；需要在局外组合技档案馆购买解锁（34 组）',
+  return section('技能共鸣', '每个技能只有一个唯一搭档；双方各 3 点触发进阶共鸣，各 4 点且均进阶触发融合共鸣',
     h('div', { class: 'codex-grid' },
       SYNERGIES.map((synergy) => {
         const [a, b] = synergy.pair.map((id) => ALL_ABILITY_BY_ID[id]);
@@ -17360,17 +17327,10 @@ function buildDraft(ctx, spec) {
   mount(modal, grid, h('p', { class: 'draft-swipe-hint' }, '左右滑动查看 3 项 · 点选一张'));
 
   const free = run.freeRerolls || 0;
-  const paidLeft = Math.max(0, (BAL.draft?.maxPaidRerolls || 2) - (run.paidRerolls || 0));
-  const cost = BAL.draft?.paidRerollCost || 35;
-  const canReroll = free > 0 || (paidLeft > 0 && run.gold >= cost);
-  const rerollLabel = free > 0
-    ? `重抽 · 免费 ×${free}`
-    : paidLeft > 0
-      ? `重抽 · ${cost} 金币（剩 ${paidLeft}）`
-      : '刷新已用完';
+  const canReroll = free > 0;
+  const rerollLabel = free > 0 ? `重抽 · 免费 ×${free}` : '刷新已用完';
   const foot = h('div', { class: 'modal-foot' },
     h('button', { class: 'btn btn-ghost', disabled: !canReroll, onclick: () => ctx.rerollDraft() }, rerollLabel),
-    h('span', { class: 'tag subtle' }, `金币 ${fmtInt(run.gold)}`)
   );
   mount(modal, foot);
   if (auto) mount(modal, h('div', { class: 'draft-auto', id: 'draft-auto' }, '自动战斗已开启：', h('b', {}, '1.3 秒'), ' 后自动选择'));
@@ -17392,14 +17352,12 @@ function buildShop(ctx) {
     h('div', { class: 'modal-head' },
       h('p', { class: 'eyebrow' }, 'WAVE SHOP'),
       h('h2', { class: 'modal-title' }, '层间商店'),
-      h('p', { class: 'modal-sub' }, `金币 ${fmtInt(run.gold)} · 每 5 层出现一次`)
+      h('p', { class: 'modal-sub' }, '每局两次 · 每次免费限购 1 件')
     )
   );
   const grid = h('div', { class: 'shop-grid' });
-  const priceOf = (offer) => Math.round(offer.cost * (1 + Math.max(0, (run.layer || 1) - 1) * 0.18));
   run.shopOffer.forEach((offer, index) => {
-    const price = priceOf(offer);
-    const affordable = run.gold >= price && !offer.sold && !run.shopBought;
+    const affordable = !offer.sold && !run.shopBought;
     const button = h('button', {
       class: `shop-item${offer.sold ? ' sold' : ''}`,
       disabled: !affordable,
@@ -17417,7 +17375,7 @@ function buildShop(ctx) {
   });
   mount(modal, grid);
   mount(modal, h('div', { class: 'shop-actions' },
-    h('span', { class: 'muted' }, run.shopBought ? '本商店已购买 1 件，继续下潜吧' : '每次商店最多购买 1 件'),
+    h('span', { class: 'muted' }, run.shopBought ? '本商店已选择 1 件，继续下潜吧' : '每次商店免费选择 1 件'),
     h('button', { class: 'btn btn-primary', onclick: () => ctx.closeShop() }, '继续下潜')
   ));
   return modal;
@@ -17486,8 +17444,6 @@ function buildReport(ctx, spec) {
       reportCell('击杀', fmtInt(report.kills)),
       reportCell('等级', `Lv.${report.level}`),
       reportCell('用时', fmtTime(report.elapsed)),
-      reportCell('金币', fmtInt(report.gold)),
-      reportCell('金币换魂火', `+${fmtInt(report.goldEmbers)}`),
       reportCell('本局新纪录', report.newBest ? '是' : '—')
     ),
     h('div', { class: 'report-ember' },
@@ -17566,7 +17522,7 @@ function buildTutorial(ctx) {
   const steps = [
     ['走位与第一技能', 'WASD / 方向键（手机拖动战斗区）移动，角色自动锁敌射击。开局没有主动技能，首次升级三选一中选择技能根节点来获得第一个技能。'],
     ['14 技能 · 6 格', '14 个基础技能分为速射、普通与重型，另有层专属技能。技能槽按玩家等级 1 / 4 / 7 / 10 / 13 / 16 解锁，且每层有独立上限；点击圆形图标可查看真实冷却和技能详情。'],
-    ['层 = 一局', '每层是独立一局：主页选层，连续刷怪，击败本层 Boss 后通关并解锁下一层；每局两次商店，每次最多买一件。'],
+    ['层 = 一局', '每层是独立一局：主页选层，连续刷怪，击败本层 Boss 后通关并解锁下一层；每局两次商店，每次可免费选择一件。'],
     ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
     ['组合无需购买', '每个技能只有一个唯一搭档。进阶共鸣双方各 3 点；融合共鸣需双方各 4 点且都点亮进阶，融合后只占一个技能格。'],
     ['带回魂火', '死亡或主动撤退都会结算魂火。魂火用于余烬祭坛的永久强化。'],
@@ -18186,7 +18142,7 @@ function createApp() {
         if (!ui.autoShopAt) ui.autoShopAt = now + 900;
         if (now >= ui.autoShopAt) {
           ui.autoShopAt = 0;
-          const index = run.shopOffer.findIndex((offer) => !offer.sold && offer.cost <= run.gold);
+          const index = run.shopOffer.findIndex((offer) => !offer.sold);
           if (index >= 0) ctx.buyShop(index);
           else ctx.leaveShop();
         }
