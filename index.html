@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:32:38.116Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T01:35:20.065Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6346,9 +6346,11 @@ const BAL = {
   },
   layers: {
     bossAtBase: 420,
-    bossAtPerLayer: 45,
+    bossAtPerLayer: 60,
     shopAt: [0.55, 0.85],
-    maxLayer: 10
+    maxLayer: 10,
+    maxSlotsBase: 3,
+    maxSlotsPerLayers: 2
   },
   shop: {
     everyLayers: 5,
@@ -6463,6 +6465,14 @@ function nextSkillSlot(level) {
     if (l < stage.level) return { level: stage.level, slots: stage.slots };
   }
   return null;
+}
+
+
+// 每层允许的最高技能格：第 1 层 3 格，之后每 2 层 +1，最高 6。
+function maxSkillSlotsAt(layer) {
+  const l = Math.max(1, Math.floor(layer || 1));
+  const extra = Math.floor((l - 1) / 2);
+  return Math.min(6, (BAL.layers.maxSlotsBase || 3) + extra);
 }
 
 // ── js/engine/rng.js ──
@@ -8106,7 +8116,8 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     shopOffer: null,
     mapIndex: (layer - 1) % 6,
     layersCleared: 0,
-    skillCap: skillSlotsAt(1),
+    maxSkillSlots: maxSkillSlotsAt(layer),
+    skillCap: Math.min(skillSlotsAt(1), maxSkillSlotsAt(layer)),
     kills: 0,
     gold: 0,
     xp: 0,
@@ -8165,7 +8176,7 @@ function createRun(meta, seed = (Date.now() ^ Math.floor(Math.random() * 0x7ffff
     log: [],
     lastProgressAt: 0
   };
-  run.skillCap = Math.max(skillSlotsAt(1), Math.min(2, (run.layerActiveSkillIds || []).length));
+  run.skillCap = Math.min(run.maxSkillSlots, Math.max(skillSlotsAt(1), Math.min(2, (run.layerActiveSkillIds || []).length)));
   run._rng = new Rng(run.seed);
   run.rngState = run._rng.state;
   recomputeStats(run);
@@ -8345,7 +8356,7 @@ function recomputeStats(run) {
   }
   const list = collectUnlockedAbilities(run);
   run.skillUpgrades = aggregateSkillUpgrades(run);
-  run.skillCap = Math.max(1, Math.min(BAL.skillSlots[BAL.skillSlots.length - 1].slots, run.skillCap || skillSlotsAt(run.level || 1)));
+  run.skillCap = Math.max(1, Math.min(run.maxSkillSlots || 6, BAL.skillSlots[BAL.skillSlots.length - 1].slots, run.skillCap || skillSlotsAt(run.level || 1)));
   const fusionList = list.filter((id) => FUSION_BY_ID[id]);
   const baseList = list.filter((id) => !FUSION_BY_ID[id]);
   const activeList = [...fusionList, ...baseList].slice(0, run.skillCap);
@@ -9495,7 +9506,7 @@ function gainXp(run, value, events) {
     run.xp -= run.xpNext;
     run.level += 1;
     run.xpNext = xpToNext(run.level);
-    const nextCap = skillSlotsAt(run.level);
+    const nextCap = Math.min(run.maxSkillSlots || 6, skillSlotsAt(run.level));
     if (nextCap > (run.skillCap || 1)) {
       run.skillCap = nextCap;
       recomputeStats(run);
@@ -10552,7 +10563,8 @@ function hydrateRun(data) {
   run.projectiles = run.projectiles || [];
   run.enemyShots = run.enemyShots || [];
   run.zones = run.zones || [];
-  run.skillCap = run.skillCap || skillSlotsAt(run.level || 1);
+  run.maxSkillSlots = run.maxSkillSlots || maxSkillSlotsAt(run.layer || run.depth || 1);
+  run.skillCap = Math.min(run.maxSkillSlots, run.skillCap || skillSlotsAt(run.level || 1));
   run.orbs = run.orbs || [];
   run.cardCounts = run.cardCounts || {};
   run.relicIds = run.relicIds || [];
@@ -15509,10 +15521,11 @@ function buildAbilityBar(ctx, force = false) {
       slot.append(button);
     } else {
       const stage = BAL.skillSlots[index];
+      const layerLocked = index >= (run.maxSkillSlots || 6);
       slot.append(h('span', {
         class: 'skill-slot-empty',
-        'aria-label': unlocked ? `第 ${index + 1} 技能槽，等待升级三选一解锁` : `等级 ${stage?.level || 10} 解锁第 ${index + 1} 技能槽`
-      }, unlocked ? '+' : '◇', !unlocked ? h('small', {}, stage?.level || 10) : null));
+        'aria-label': layerLocked ? `本层最多 ${run.maxSkillSlots || 6} 个技能格` : unlocked ? `第 ${index + 1} 技能槽，等待升级三选一解锁` : `等级 ${stage?.level || 10} 解锁第 ${index + 1} 技能槽`
+      }, layerLocked ? '×' : unlocked ? '+' : '◇', !unlocked && !layerLocked ? h('small', {}, stage?.level || 10) : null));
     }
     delveEls.abilityBar.append(slot);
   }
