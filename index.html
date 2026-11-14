@@ -6232,7 +6232,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:52:30.859Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:55:07.200Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -7069,6 +7069,13 @@ const CARDS = [
   { id: 'r_tome_bloodmoon', name: '残卷 · 血月', glyph: '月', rarity: 'rare', effects: { unlock: 'bloodmoon' }, flavor: '翻页时指尖被割破。' },
 
   // ── 融合共鸣（每个技能只有一个融合搭档） ──
+  { id: 'fuse_brood', name: '融合 · 寄生图腾', glyph: '卵', rarity: 'epic', fusion: 'fuse_brood', requires: ['parasite', 'totem'], effects: {}, desc: '寄生卵 + 诱饵图腾融合为寄生图腾：嘲讽、寄生与爆炸同时生效。', flavor: '它替你站着，也替你孵化。' },
+  { id: 'fuse_mirror_echo', name: '融合 · 镜影', glyph: '镜', rarity: 'epic', fusion: 'fuse_mirror_echo', requires: ['mirror', 'echo'], effects: {}, desc: '镜返 + 回响替身融合为镜影：自动射击并复制技能。', flavor: '镜子里的你，先动了一步。' },
+  { id: 'fuse_gravity_stasis', name: '融合 · 时空井', glyph: '滞', rarity: 'epic', fusion: 'fuse_gravity_stasis', requires: ['gravity', 'stasis'], effects: {}, desc: '重力井 + 时停融合为时空井：弯曲弹道并冻结弹幕。', flavor: '时间掉进井里，也没有声音。' },
+  { id: 'fuse_devour_wall', name: '融合 · 噬界', glyph: '噬', rarity: 'epic', fusion: 'fuse_devour_wall', requires: ['devour', 'wall'], effects: {}, desc: '吞噬 + 地脉改写融合为噬界：处决低血怪并展开屏障。', flavor: '先吃掉路，再吃掉路上的人。' },
+  { id: 'fuse_shadow_doom', name: '融合 · 终焉影', glyph: '终', rarity: 'epic', fusion: 'fuse_shadow_doom', requires: ['shadow', 'doom'], effects: {}, desc: '影分身 + 终焉凝视融合为终焉影：复制攻击并引爆凝视。', flavor: '影子替你看见终结。' },
+
+
   { id: 'fuse_sunfall', name: '融合 · 日陨星', glyph: '陨', rarity: 'epic', fusion: 'fuse_sunfall', requires: ['meteor', 'sunbeam'], effects: {}, desc: '天火 + 日矛融合为日陨星：连续日陨爆破，灼烧全场。', flavor: '太阳落下来的时候，没有影子。' },
   { id: 'fuse_frostgrave', name: '融合 · 霜墓', glyph: '霜', rarity: 'epic', fusion: 'fuse_frostgrave', requires: ['frost', 'icenova'], effects: {}, desc: '白羽 + 冰墓融合为霜墓：新星爆发、长减速与穿透冰晶。', flavor: '冷到极致，连时间都结冰。' },
   { id: 'fuse_thunderstorm', name: '融合 · 雷狱', glyph: '狱', rarity: 'epic', fusion: 'fuse_thunderstorm', requires: ['chain', 'stormfield'], effects: {}, desc: '雷鼓 + 雷牢融合为雷狱：连锁雷击与持续牵引电域。', flavor: '雷在笼子里，笼子也在雷里。' },
@@ -7285,6 +7292,12 @@ const LAYER_SKILLS = [
     element: 'void', color: '#b48cff', type: '层专属 · 高伤复制', minLayer: 9,
     desc: (ap) => `影子跟随你 5 秒，复制你的普攻和技能（不复制替身技能）；复制伤害比例高于回响替身，单次约 ${Math.round(55 * ap)}%。`,
     flavor: '影子不需要你同意。'
+  },
+  {
+    id: 'doom', name: '终焉凝视', glyph: '终', cd: 10, role: 'heavy', behavior: 'doomMark',
+    element: 'void', color: '#d9a7ff', type: '层专属 · 终焉', minLayer: 10,
+    desc: (ap) => `凝视敌群并造成 ${Math.round(130 * ap)}% 伤害；被凝视的敌人 5 秒内死亡会引发终焉爆炸。`,
+    flavor: '被看见的东西，已经开始消失。'
   }
 ];
 
@@ -7342,6 +7355,25 @@ const SKILL_TRAITS = {
     { id: 'side', name: '双影', desc: '额外追加一枚影子弹', max: 2 }
   ]
 };
+
+
+// 层专属技能的唯一搭档：10 个技能组成 5 对。
+const LAYER_PAIRS = [
+  { id: 'brood_pair', name: '寄生图腾', pair: ['parasite', 'totem'], fusion: 'fuse_brood', desc: '图腾生命 +25%，寄生魂弹伤害 +30%。', mods: { abilityPowerPct: 0.15 } },
+  { id: 'mirror_pair', name: '镜影', pair: ['mirror', 'echo'], fusion: 'fuse_mirror_echo', desc: '镜返持续 +0.4 秒，替身伤害 +20%。', mods: { abilityPowerPct: 0.2 } },
+  { id: 'gravity_pair', name: '时空井', pair: ['gravity', 'stasis'], fusion: 'fuse_gravity_stasis', desc: '重力井范围 +20%，时停持续 +0.3 秒。', mods: { abilityPowerPct: 0.2 } },
+  { id: 'devour_pair', name: '噬界', pair: ['devour', 'wall'], fusion: 'fuse_devour_wall', desc: '吞噬回复 +2%，地脉屏障持续时间 +1 秒。', mods: { maxHpPct: 0.08 } },
+  { id: 'shadow_pair', name: '终焉影', pair: ['shadow', 'doom'], fusion: 'fuse_shadow_doom', desc: '影分身伤害 +15%，终焉爆炸范围 +20%。', mods: { abilityPowerPct: 0.2 } }
+];
+
+// 层专属技能的融合形态（复用现有行为，数值更高）。
+const LAYER_FUSIONS = [
+  { id: 'fuse_brood', name: '寄生图腾', glyph: '卵', behavior: 'decoyTotem', requires: ['parasite', 'totem'], color: '#9ff0c0', desc: '召唤寄生图腾：嘲讽、寄生与爆炸同时生效。' },
+  { id: 'fuse_mirror_echo', name: '镜影', glyph: '镜', behavior: 'echoClone', requires: ['mirror', 'echo'], color: '#9fd8ff', desc: '留下镜影：自动射击并复制你释放的技能。' },
+  { id: 'fuse_gravity_stasis', name: '时空井', glyph: '滞', behavior: 'timeStop', requires: ['gravity', 'stasis'], color: '#bfe9ff', desc: '展开时空井：弯曲弹道并冻结敌方弹幕。' },
+  { id: 'fuse_devour_wall', name: '噬界', glyph: '噬', behavior: 'earthWall', requires: ['devour', 'wall'], color: '#a0d8a8', desc: '吞掉低血敌人，并在场上展开地脉屏障。' },
+  { id: 'fuse_shadow_doom', name: '终焉影', glyph: '终', behavior: 'shadowClone', requires: ['shadow', 'doom'], color: '#d9a7ff', desc: '召出终焉之影，复制攻击并引爆被凝视的敌人。' }
+];
 
 // ── js/data/abilities.js ──
 // v5 主动技能：6 速射、7 普通、2 重型，另有 3 个局内合成与层专属技能。
@@ -7434,7 +7466,7 @@ const ABILITIES = [
   }
 ];
 
-const FUSIONS = [
+const BASE_FUSIONS = [
   {
     id: 'fuse_sunfall', name: '日陨星', glyph: '陨', cd: 9, role: 'fusion', behavior: 'icefireMeteors',
     element: 'fire', elements: ['fire'], color: '#ffb35c', type: '融合共鸣 · 日陨',
@@ -7488,6 +7520,22 @@ const FUSIONS = [
 
 
 
+const LAYER_FUSION_DEFS = LAYER_FUSIONS.map((fusion, index) => ({
+  ...fusion,
+  id: fusion.id,
+  name: fusion.name,
+  glyph: fusion.glyph,
+  cd: 9 + index * 0.4,
+  role: 'fusion',
+  element: fusion.requires.includes('parasite') || fusion.requires.includes('devour') ? null : 'void',
+  color: fusion.color,
+  type: `层融合 · ${fusion.name}`,
+  desc: (ap) => `${fusion.desc}（伤害 ${Math.round(210 * ap)}% 攻击力）`,
+  flavor: '层与层的界线上，长出了新的东西。'
+}));
+
+const FUSIONS = [...BASE_FUSIONS, ...LAYER_FUSION_DEFS];
+
 const ABILITY_BY_ID = Object.fromEntries(ABILITIES.map((ability) => [ability.id, ability]));
 const FUSION_BY_ID = Object.fromEntries(FUSIONS.map((fusion) => [fusion.id, fusion]));
 const ALL_ABILITIES = [...ABILITIES, ...FUSIONS, ...LAYER_SKILLS];
@@ -7499,6 +7547,7 @@ const ALL_ABILITY_BY_ID = Object.fromEntries(ALL_ABILITIES.map((ability) => [abi
 
 
 
+
 const RAW_SYNERGIES = [
   { id: 'solar_meteor', name: '日陨', glyph: '陨', pair: ['meteor', 'sunbeam'], tier: 'major', resonance: 3, desc: '元素反应伤害 +25%，对首领伤害 +10%。', mods: { reactionDmgPct: 0.25, bossDmgPct: 0.1 } },
   { id: 'frost_grave', name: '霜墓', glyph: '霜', pair: ['frost', 'icenova'], tier: 'major', resonance: 3, desc: '缓速 +10%，元素反应伤害 +20%。', mods: { slowPct: 0.1, reactionDmgPct: 0.2 } },
@@ -7506,7 +7555,8 @@ const RAW_SYNERGIES = [
   { id: 'void_event', name: '事件视界', glyph: '界', pair: ['voidrift', 'singularity'], tier: 'major', resonance: 3, desc: '技能强度 +25%，护盾上限提升。', mods: { abilityPowerPct: 0.25 }, flags: ['shieldCap'] },
   { id: 'star_crown', name: '星冕', glyph: '冕', pair: ['starshield', 'starfall'], tier: 'major', resonance: 3, desc: '开局护盾 +10%，对首领伤害 +15%。', mods: { startShieldPct: 0.1, bossDmgPct: 0.15 } },
   { id: 'blood_moon', name: '血月', glyph: '月', pair: ['bloodrite', 'bloodmoon'], tier: 'major', resonance: 3, desc: '吸血 +12%，击杀回复生命。', mods: { lifestealPct: 0.12 }, flags: ['killHeal'] },
-  { id: 'ember_brand', name: '雷鸦', glyph: '鸦', pair: ['embergun', 'thunderbrand'], tier: 'major', resonance: 3, desc: '普攻伤害 +20%，弹射 +1 目标。', mods: { basicDmgPct: 0.2, basicChain: 1 } }
+  { id: 'ember_brand', name: '雷鸦', glyph: '鸦', pair: ['embergun', 'thunderbrand'], tier: 'major', resonance: 3, desc: '普攻伤害 +20%，弹射 +1 目标。', mods: { basicDmgPct: 0.2, basicChain: 1 } },
+  ...LAYER_PAIRS.map((pair) => ({ id: pair.id, name: pair.name, glyph: '层', pair: pair.pair, tier: 'major', resonance: 3, desc: pair.desc, mods: pair.mods || {} }))
 ];
 
 const SYNERGIES = RAW_SYNERGIES.map((synergy) => {
@@ -7525,7 +7575,8 @@ const SYNERGY_BY_ID = Object.fromEntries(SYNERGIES.map((synergy) => [synergy.id,
 function skillResonance(run, id) {
   const numeric = Math.max(0, (run && run.skillNumericCounts && run.skillNumericCounts[id]) || 0);
   const advanced = !!(run && run.skillTree && run.skillTree[`advanced_${id}`]);
-  return numeric + (advanced ? 1 : 0);
+  const traits = Object.values((run && run.skillTraits && run.skillTraits[id]) || {}).reduce((sum, value) => sum + value, 0);
+  return numeric + (advanced ? 1 : 0) + traits;
 }
 
 function ownedAbilitySet(run) {
@@ -8402,7 +8453,7 @@ function comboState(run, comboId) {
     skill: id,
     value: resonanceOf(run, id),
     need: 4,
-    advanced: !!(run.skillTree && run.skillTree[`advanced_${id}`])
+    advanced: !!(run.skillTree && run.skillTree[`advanced_${id}`]) || Object.values((run.skillTraits && run.skillTraits[id]) || {}).some((value) => value > 0)
   }));
   return {
     id: fusion.id, kind: 'fusion', owned, need: 4, progress,
@@ -8889,6 +8940,10 @@ function killEnemy(run, enemy, events) {
   });
   if (run.mods.flags.killHeal) healPlayer(run, run.maxHp * 0.015, events, true);
   if (!enemy.boss) run.depthProgress += 1;
+  if (!enemy.boss && enemy.doomUntil && enemy.doomUntil > run.elapsed) {
+    aoeDamage(run, enemy.x, enemy.y, 125, run.stats.atk * 0.85, events, { element: 'void', color: '#d9a7ff' });
+    pushEvent(events, { type: 'ring', x: enemy.x, y: enemy.y, radius: 125, color: '#d9a7ff' });
+  }
   if (!enemy.boss && enemy.parasiteUntil && enemy.parasiteUntil > run.elapsed) {
     const brood = enemy.parasiteCount || 4;
     for (let i = 0; i < brood; i++) {
@@ -10128,6 +10183,13 @@ function castAbility(run, id) {
     run.shadowDmg = attack * 0.55 * (1 + 0.15 * skillTraitLevel(run, 'shadow', 'damage'));
     run.shadowSkillTimer = 0;
     pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 38, color: def.color });
+  } else if (behavior === 'doomMark') {
+    aoeDamage(run, tx, ty, 175, attack * 1.3, events, { element: 'void', color: def.color });
+    for (const enemy of run.enemies) {
+      if (enemy.dead) continue;
+      if (distance(enemy.x, enemy.y, tx, ty) <= 210) enemy.doomUntil = run.elapsed + 5;
+    }
+    pushEvent(events, { type: 'ring', x: tx, y: ty, radius: 175, color: def.color });
   } else if (behavior === 'fusionBarrage') {
     fireFan(run, 8 + extra, 1.35, 620, {
       dmg: attack * 0.55, radius: 5, life: 1.2, element: 'fire', color: def.color, kind: 'ember', pierce: 1
@@ -11485,6 +11547,12 @@ const ICONS = {
   stasis: { paths: ['M16 4 V28', 'M5 16 H27', 'M9 9 L23 23', 'M23 9 L9 23'], circles: [[16, 16, 4]] },
   devour: { paths: ['M5 16 C5 9 10 5 16 5 C22 5 27 9 27 16 C27 23 22 27 16 27 C10 27 5 23 5 16 Z', 'M9 18 C12 22 20 22 23 18', 'M10 12 L13 15', 'M22 12 L19 15'] },
   wall: { paths: ['M4 22 H28', 'M6 22 V12 H12 V22', 'M12 12 V8 H20 V12', 'M20 12 H26 V22', 'M9 17 H15', 'M19 17 H25'] },
+  doom: { paths: ['M16 4 L25 10 V22 L16 28 L7 22 V10 Z', 'M16 9 L21 15 L16 21 L11 15 Z'], circles: [[16, 15, 1.5]] },
+  fuse_brood: { paths: ['M16 5 C23 5 27 11 25 18 C23 25 16 28 10 23 C5 19 7 11 12 8 C13 6 15 5 16 5 Z', 'M16 12 C19 12 21 14 20 17 C19 20 15 20 14 18 C13 16 14 13 16 12 Z'], circles: [[16, 16, 1.6]] },
+  fuse_mirror_echo: { paths: ['M16 4 L27 9 V19 C27 24 22 27 16 29 C10 27 5 24 5 19 V9 Z', 'M11 10 L21 22', 'M21 10 L11 22', 'M16 15 L19 18 L16 21 L13 18 Z'] },
+  fuse_gravity_stasis: { paths: ['M16 4 V28', 'M5 16 H27', 'M9 9 L23 23', 'M23 9 L9 23'], circles: [[16, 16, 5]] },
+  fuse_devour_wall: { paths: ['M5 20 H27', 'M8 20 V11 H14 V20', 'M14 11 V7 H22 V11', 'M22 11 H26 V20', 'M10 16 H18'] },
+  fuse_shadow_doom: { paths: ['M10 7 C14 3 22 5 24 11 C27 19 20 27 13 26 C6 25 3 16 7 11 C8 9 9 8 10 7 Z', 'M12 13 L16 17 L21 12', 'M11 22 L8 26', 'M22 22 L25 26'] },
   shadow: { paths: ['M10 8 C13 4 20 4 23 9 C26 14 24 22 18 25 C12 28 5 22 6 15 C6 12 8 10 10 8 Z', 'M12 14 L16 18 L20 13', 'M11 23 L8 27', 'M22 23 L25 27'] },
 };
 
