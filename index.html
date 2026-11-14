@@ -6241,7 +6241,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:22:15.997Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T02:30:18.721Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -6265,6 +6265,9 @@ const BAL = {
     moveSpeed: 2.2
   },
   armorK: 45,
+  bossDebuff: {
+    playerDamageReduction: 0.15
+  },
   baseRegen: 0,
   healPulse: {
     interval: 2,
@@ -6349,7 +6352,7 @@ const BAL = {
     bossAtPerLayer: 60,
     shopAt: [0.55, 0.85],
     maxLayer: 10,
-    maxSlotsBase: 4,
+    maxSlotsBase: 3,
     maxSlotsPerLayers: 2
   },
   shop: {
@@ -7079,25 +7082,14 @@ const CARDS = [
   { id: 'r_tome_stormfield', name: '残卷 · 雷暴', glyph: '云', rarity: 'rare', effects: { unlock: 'stormfield' }, flavor: '抖一抖就会下雨。' },
   { id: 'r_tome_bloodmoon', name: '残卷 · 血月', glyph: '月', rarity: 'rare', effects: { unlock: 'bloodmoon' }, flavor: '翻页时指尖被割破。' },
 
-  // ── 技能合成（同时拥有组件技能时才会出现） ──
-  {
-    id: 'fuse_icefire', name: '合成 · 冰火陨星', glyph: '冰', rarity: 'epic',
-    fusion: 'fuse_icefire', requires: ['meteor', 'frost'], effects: {},
-    desc: '将【陨火】与【霜环】合成为冰火陨星：220% 攻击力范围爆发，并追加火流星与冰棱弹幕，必定触发元素反应。',
-    flavor: '冷到极致，就是灼烧。'
-  },
-  {
-    id: 'fuse_stormrift', name: '合成 · 雷狱裂隙', glyph: '狱', rarity: 'epic',
-    fusion: 'fuse_stormrift', requires: ['chain', 'voidrift'], effects: {},
-    desc: '将【雷链】与【虚空脉冲】合成为雷狱裂隙：牵引 + 连锁雷击，并追加感电与虚空弹幕。',
-    flavor: '雷在笼子里，笼子也在雷里。'
-  },
-  {
-    id: 'fuse_bloodstar', name: '合成 · 血誓星盾', glyph: '誓', rarity: 'epic',
-    fusion: 'fuse_bloodstar', requires: ['starshield', 'bloodrite'], effects: {},
-    desc: '将【星盾】与【血祭】合成为血誓星盾：护盾、治疗、环绕血星与血弹扇，8 秒吸血增益。',
-    flavor: '以血立誓的人，星光会替他挡刀。'
-  },
+  // ── 融合共鸣（每个技能只有一个融合搭档） ──
+  { id: 'fuse_sunfall', name: '融合 · 日陨星', glyph: '陨', rarity: 'epic', fusion: 'fuse_sunfall', requires: ['meteor', 'sunbeam'], effects: {}, desc: '天火 + 日矛融合为日陨星：连续日陨爆破，灼烧全场。', flavor: '太阳落下来的时候，没有影子。' },
+  { id: 'fuse_frostgrave', name: '融合 · 霜墓', glyph: '霜', rarity: 'epic', fusion: 'fuse_frostgrave', requires: ['frost', 'icenova'], effects: {}, desc: '白羽 + 冰墓融合为霜墓：新星爆发、长减速与穿透冰晶。', flavor: '冷到极致，连时间都结冰。' },
+  { id: 'fuse_thunderstorm', name: '融合 · 雷狱', glyph: '狱', rarity: 'epic', fusion: 'fuse_thunderstorm', requires: ['chain', 'stormfield'], effects: {}, desc: '雷鼓 + 雷牢融合为雷狱：连锁雷击与持续牵引电域。', flavor: '雷在笼子里，笼子也在雷里。' },
+  { id: 'fuse_voidwell', name: '融合 · 虚渊', glyph: '渊', rarity: 'epic', fusion: 'fuse_voidwell', requires: ['voidrift', 'singularity'], effects: {}, desc: '萤火 + 虚井融合为虚渊：持续牵引并造成范围伤害。', flavor: '井底没有水，只有方向在往下掉。' },
+  { id: 'fuse_starcrown', name: '融合 · 星冕', glyph: '冕', rarity: 'epic', fusion: 'fuse_starcrown', requires: ['starshield', 'starfall'], effects: {}, desc: '星纱 + 星崩融合为星冕：环绕星屑与多波星陨。', flavor: '星星也会为自己加冕。' },
+  { id: 'fuse_bloodmoon', name: '融合 · 血月葬', glyph: '血', rarity: 'epic', fusion: 'fuse_bloodmoon', requires: ['bloodrite', 'bloodmoon'], effects: {}, desc: '回刃 + 血葬融合为血月葬：护盾、治疗、环绕血月与吸血。', flavor: '以血立誓的人，月光会替他挡刀。' },
+  { id: 'fuse_emberbrand', name: '融合 · 雷鸦', glyph: '鸦', rarity: 'epic', fusion: 'fuse_emberbrand', requires: ['embergun', 'thunderbrand'], effects: {}, desc: '赤鸦 + 雷印融合为雷鸦：鸦群扇射与连锁雷击同时爆发。', flavor: '鸦群落下时，雷声才到。' },
 
   // ── 禁忌 ──
   { id: 'x_pact', name: '诅咒契约', glyph: '契', rarity: 'cursed', effects: { dmgPct: 0.7, maxHpPct: -0.2 }, flavor: '签名用的不是墨水。' },
@@ -7460,25 +7452,53 @@ const ABILITIES = [
 
 const FUSIONS = [
   {
-    id: 'fuse_icefire', name: '霜火天坠', glyph: '霜', cd: 9, role: 'fusion', behavior: 'icefireMeteors',
-    element: 'fire', elements: ['fire', 'ice'], color: '#ffb3a0', type: '合成 · 双元素陨星',
-    requires: ['meteor', 'frost'],
-    desc: (ap) => `连续引发 5 次霜火爆破（每次 ${Math.round(112 * ap)}% 范围伤害），同时附加灼烧与霜寒。局内门槛：天火、白羽各 4 点共鸣且均进阶。`,
-    flavor: '冷到极致，就是灼烧。'
+    id: 'fuse_sunfall', name: '日陨星', glyph: '陨', cd: 9, role: 'fusion', behavior: 'icefireMeteors',
+    element: 'fire', elements: ['fire'], color: '#ffb35c', type: '融合共鸣 · 日陨',
+    requires: ['meteor', 'sunbeam'],
+    desc: (ap) => `连续砸下日陨与余烬爆发（每次 ${Math.round(105 * ap)}% 范围伤害），灼烧全场。局内门槛：天火、日矛各 4 点共鸣且均进阶。`,
+    flavor: '太阳落下来的时候，没有影子。'
   },
   {
-    id: 'fuse_stormrift', name: '雷渊', glyph: '渊', cd: 7, role: 'fusion', behavior: 'stormriftZone',
-    element: 'shock', elements: ['shock', 'void'], color: '#d4b3ff', type: '合成 · 雷渊牵引',
-    requires: ['chain', 'voidrift'],
-    desc: (ap) => `连锁雷击 8 次并撕开持续牵引的雷渊，领域内同时附加感电与侵蚀。局内门槛：雷鼓、萤火各 4 点共鸣且均进阶。`,
+    id: 'fuse_frostgrave', name: '霜墓', glyph: '霜', cd: 8, role: 'fusion', behavior: 'iceNova',
+    element: 'ice', elements: ['ice'], color: '#9fe8ff', type: '融合共鸣 · 霜墓',
+    requires: ['frost', 'icenova'],
+    desc: (ap) => `以自身为碑心爆发霜墓新星（${Math.round(210 * ap)}% 范围伤害），长时间减速并射出穿透冰晶。局内门槛：白羽、冰墓各 4 点共鸣且均进阶。`,
+    flavor: '冷到极致，连时间都结冰。'
+  },
+  {
+    id: 'fuse_thunderstorm', name: '雷狱', glyph: '狱', cd: 7, role: 'fusion', behavior: 'stormriftZone',
+    element: 'shock', elements: ['shock'], color: '#d4b3ff', type: '融合共鸣 · 雷狱',
+    requires: ['chain', 'stormfield'],
+    desc: (ap) => `连锁雷击并展开雷狱领域，持续电击与牵引。局内门槛：雷鼓、雷牢各 4 点共鸣且均进阶。`,
     flavor: '雷在笼子里，笼子也在雷里。'
   },
   {
-    id: 'fuse_bloodstar', name: '血星葬', glyph: '星', cd: 8, role: 'fusion', behavior: 'bloodstarOrbit',
-    element: 'void', elements: ['void'], color: '#ff9fb0', type: '合成 · 血星环绕',
-    requires: ['starshield', 'bloodrite'],
-    desc: (ap) => `获得护盾与治疗，召出环绕血星及物理回刃，6 秒内吸血 +15%。局内门槛：星纱、回刃各 4 点共鸣且均进阶。`,
-    flavor: '以血立誓的人，星光会替他挡刀。'
+    id: 'fuse_voidwell', name: '虚渊', glyph: '渊', cd: 8, role: 'fusion', behavior: 'singularityZone',
+    element: 'void', elements: ['void'], color: '#b48cff', type: '融合共鸣 · 虚渊',
+    requires: ['voidrift', 'singularity'],
+    desc: (ap) => `在敌群中打开持续虚渊，牵引敌人并造成 ${Math.round(70 * ap)}% 范围伤害。局内门槛：萤火、虚井各 4 点共鸣且均进阶。`,
+    flavor: '井底没有水，只有方向在往下掉。'
+  },
+  {
+    id: 'fuse_starcrown', name: '星冕', glyph: '冕', cd: 10, role: 'fusion', behavior: 'starfallBarrage',
+    element: 'void', elements: ['void'], color: '#c9a7ff', type: '融合共鸣 · 星冕',
+    requires: ['starshield', 'starfall'],
+    desc: (ap) => `召出星冕环绕，并降下多波星陨（每枚 ${Math.round(80 * ap)}%）。局内门槛：星纱、星崩各 4 点共鸣且均进阶。`,
+    flavor: '星星也会为自己加冕。'
+  },
+  {
+    id: 'fuse_bloodmoon', name: '血月葬', glyph: '血', cd: 8, role: 'fusion', behavior: 'bloodstarOrbit',
+    element: 'void', elements: ['void'], color: '#ff9fb0', type: '融合共鸣 · 血月葬',
+    requires: ['bloodrite', 'bloodmoon'],
+    desc: (ap) => `获得护盾与治疗，召出环绕血月与血刃，期间吸血。局内门槛：回刃、血葬各 4 点共鸣且均进阶。`,
+    flavor: '以血立誓的人，月光会替他挡刀。'
+  },
+  {
+    id: 'fuse_emberbrand', name: '雷鸦', glyph: '鸦', cd: 7, role: 'fusion', behavior: 'fusionBarrage',
+    element: 'shock', elements: ['shock', 'fire'], color: '#ffd166', type: '融合共鸣 · 雷鸦',
+    requires: ['embergun', 'thunderbrand'],
+    desc: (ap) => `鸦群扇射与雷印连锁同时爆发（每枚 ${Math.round(55 * ap)}%），并追加连锁雷击。局内门槛：赤鸦、雷印各 4 点共鸣且均进阶。`,
+    flavor: '鸦群落下时，雷声才到。'
   }
 ];
 
@@ -7491,59 +7511,23 @@ const ALL_ABILITY_BY_ID = Object.fromEntries(ALL_ABILITIES.map((ability) => [abi
 
 // ── js/data/synergies.js ──
 // v4 局内共鸣：不再需要局外购买。
-// 技能共鸣值 = 普通数值强化次数 +（已点亮进阶 ? 1 : 0）。normal 需双方 3，major 需双方 4。
+// 技能共鸣值 = 数值强化次数 +（已点亮进阶 ? 1 : 0）。每对技能只有一个进阶共鸣，双方各 3 点。
 
 
 
 const RAW_SYNERGIES = [
-  { id: 'melt', name: '融化', glyph: '蒸', pair: ['meteor', 'frost'], desc: '蒸发反应伤害 +60%。', mods: { reactionDmgPct: 0.6 } },
-  { id: 'overload', name: '超载', glyph: '爆', pair: ['meteor', 'chain'], tier: 'major', desc: '元素反应伤害 +30%，超载附带更长眩晕。', mods: { reactionDmgPct: 0.3 }, flags: ['overloadStun'] },
-  { id: 'soulburn', name: '燃魂', glyph: '魂', pair: ['meteor', 'voidrift'], desc: '元素反应伤害 +20%，燃魂额外回复生命。', mods: { reactionDmgPct: 0.2 }, flags: ['soulburnHeal'] },
-  { id: 'ember_guard', name: '熔盾', glyph: '熔', pair: ['meteor', 'starshield'], desc: '持有护盾时伤害 +20%。', mods: { shieldDmgPct: 0.2 } },
-  { id: 'blood_flame', name: '血火', glyph: '烈', pair: ['meteor', 'bloodrite'], desc: '低血增伤 +15%。', mods: { belowHalfDmgPct: 0.15 } },
-  { id: 'superconduct', name: '超导', glyph: '导', pair: ['frost', 'chain'], desc: '元素反应伤害 +20%，超导额外降低防御。', mods: { reactionDmgPct: 0.2 }, flags: ['superconductShred'] },
-  { id: 'annihilate', name: '湮灭', glyph: '湮', pair: ['frost', 'voidrift'], tier: 'major', desc: '元素反应伤害 +25%，湮灭处决阈值提升。', mods: { reactionDmgPct: 0.25 }, flags: ['annihilateBoost'] },
-  { id: 'ice_armor', name: '冰甲', glyph: '甲', pair: ['frost', 'starshield'], desc: '护甲 +25，近战攻击者被霜寒。', mods: { armorFlat: 25 }, flags: ['chillContact'] },
-  { id: 'cold_blood', name: '冷血', glyph: '冷', pair: ['frost', 'bloodrite'], desc: '吸血 +10%。', mods: { lifestealPct: 0.1 } },
-  { id: 'storm', name: '雷暴', glyph: '暴', pair: ['chain', 'voidrift'], tier: 'major', desc: '元素反应伤害 +25%，雷暴牵引更强。', mods: { reactionDmgPct: 0.25 }, flags: ['stormBoost'] },
-  { id: 'shock_shield', name: '电盾', glyph: '电', pair: ['chain', 'starshield'], desc: '护盾被击碎时释放电环。', flags: ['shieldNova'] },
-  { id: 'leech_thunder', name: '雷血', glyph: '雷', pair: ['chain', 'bloodrite'], desc: '击杀回复 1.5% 最大生命。', flags: ['killHeal'] },
-  { id: 'void_wall', name: '虚空壁垒', glyph: '壁', pair: ['voidrift', 'starshield'], desc: '开局护盾 +10%，护盾上限提升。', mods: { startShieldPct: 0.1 }, flags: ['shieldCap'] },
-  { id: 'sacrifice', name: '献祭', glyph: '祭', pair: ['voidrift', 'bloodrite'], tier: 'major', desc: '血刃回旋不再损失生命，并改为回复 4% 最大生命。', flags: ['bloodriteHeal'] },
-  { id: 'blood_shield', name: '血盾', glyph: '誓', pair: ['starshield', 'bloodrite'], desc: '持有护盾时伤害 +10%，吸血 +5%。', mods: { shieldDmgPct: 0.1, lifestealPct: 0.05 } },
-  { id: 'thunder_flame', name: '雷火', glyph: '霆', pair: ['thunderbrand', 'meteor'], desc: '普攻伤害 +25%。', mods: { basicDmgPct: 0.25 } },
-  { id: 'thunder_chain', name: '雷涌', glyph: '涌', pair: ['thunderbrand', 'chain'], tier: 'major', desc: '普攻弹射 +1 个目标，弹射伤害 +20%。', mods: { basicChain: 1, basicChainPct: 0.2 } },
-  { id: 'thunder_frost', name: '寒雷', glyph: '寒', pair: ['thunderbrand', 'frost'], desc: '普攻弹射会附加霜寒。', flags: ['chainChill'] },
-  { id: 'thunder_shield', name: '雷盾', glyph: '御', pair: ['thunderbrand', 'starshield'], desc: '普攻伤害 +15%，护盾上限提升。', mods: { basicDmgPct: 0.15 }, flags: ['shieldCap'] },
-  { id: 'sunfire', name: '日冕', glyph: '冕', pair: ['sunbeam', 'meteor'], desc: '灼烧 +20%，普攻伤害 +10%。', mods: { burnPct: 0.2, basicDmgPct: 0.1 } },
-  { id: 'prism', name: '霜镜', glyph: '镜', pair: ['sunbeam', 'frost'], desc: '元素反应伤害 +20%。', mods: { reactionDmgPct: 0.2 } },
-  { id: 'superbeam', name: '雷曜', glyph: '曜', pair: ['sunbeam', 'chain'], tier: 'major', desc: '元素反应伤害 +25%。', mods: { reactionDmgPct: 0.25 } },
-  { id: 'bloodsun', name: '血阳', glyph: '阳', pair: ['sunbeam', 'bloodrite'], desc: '吸血 +10%。', mods: { lifestealPct: 0.1 } },
-  { id: 'thundercloud', name: '雷云', glyph: '云', pair: ['stormfield', 'chain'], desc: '元素反应伤害 +30%。', mods: { reactionDmgPct: 0.3 } },
-  { id: 'voidstorm', name: '虚暴', glyph: '暴', pair: ['stormfield', 'voidrift'], desc: '元素反应伤害 +20%，雷暴牵引更强。', mods: { reactionDmgPct: 0.2 }, flags: ['stormBoost'] },
-  { id: 'cloudshield', name: '云盾', glyph: '护', pair: ['stormfield', 'starshield'], desc: '最大生命 +8%，护盾上限提升。', mods: { maxHpPct: 0.08 }, flags: ['shieldCap'] },
-  { id: 'stormbrand', name: '引雷', glyph: '引', pair: ['stormfield', 'thunderbrand'], desc: '普攻弹射 +1 个目标，弹射伤害 +15%。', mods: { basicChain: 1, basicChainPct: 0.15 } },
-  { id: 'moonblood', name: '血月', glyph: '血', pair: ['bloodmoon', 'bloodrite'], tier: 'major', desc: '吸血 +12%。', mods: { lifestealPct: 0.12 } },
-  { id: 'moonshield', name: '月盾', glyph: '盾', pair: ['bloodmoon', 'starshield'], desc: '持有护盾时伤害 +20%。', mods: { shieldDmgPct: 0.2 } },
-  { id: 'eclipse', name: '月蚀', glyph: '蚀', pair: ['bloodmoon', 'voidrift'], desc: '元素反应伤害 +25%。', mods: { reactionDmgPct: 0.25 } },
-  { id: 'moonbrand', name: '月引', glyph: '月', pair: ['bloodmoon', 'thunderbrand'], desc: '普攻伤害 +20%。', mods: { basicDmgPct: 0.2 } },
-  { id: 'solarstorm', name: '日雷', glyph: '雷', pair: ['sunbeam', 'stormfield'], tier: 'major', desc: '元素反应伤害 +25%。', mods: { reactionDmgPct: 0.25 } },
-  { id: 'solarblood', name: '曜月', glyph: '曜', pair: ['sunbeam', 'bloodmoon'], desc: '普攻伤害 +25%。', mods: { basicDmgPct: 0.25 } },
-  { id: 'bloodstorm', name: '血暴', glyph: '暴', pair: ['stormfield', 'bloodmoon'], tier: 'major', desc: '吸血 +8%，元素反应伤害 +20%。', mods: { lifestealPct: 0.08, reactionDmgPct: 0.2 } },
-
-  // 新技能相关共鸣（10 组）。
-  { id: 'ember_nova', name: '烬晶', glyph: '烬', pair: ['embergun', 'icenova'], desc: '蒸发反应伤害 +25%，普攻伤害 +10%。', mods: { reactionDmgPct: 0.25, basicDmgPct: 0.1 } },
-  { id: 'ember_star', name: '流星膛线', glyph: '膛', pair: ['embergun', 'starfall'], desc: '普攻伤害 +20%，对首领伤害 +15%。', mods: { basicDmgPct: 0.2, bossDmgPct: 0.15 } },
-  { id: 'frost_nova', name: '绝对零度', glyph: '零', pair: ['frost', 'icenova'], tier: 'major', desc: '缓速 +12%，元素反应伤害 +20%。', mods: { slowPct: 0.12, reactionDmgPct: 0.2 } },
-  { id: 'void_singularity', name: '事件视界', glyph: '界', pair: ['voidrift', 'singularity'], tier: 'major', desc: '技能强度 +25%，护盾上限提升。', mods: { abilityPowerPct: 0.25 }, flags: ['shieldCap'] },
-  { id: 'singularity_star', name: '群星归墟', glyph: '墟', pair: ['singularity', 'starfall'], tier: 'major', desc: '元素反应伤害 +35%，对首领伤害 +20%。', mods: { reactionDmgPct: 0.35, bossDmgPct: 0.2 } },
-  { id: 'star_shield', name: '星幕', glyph: '幕', pair: ['starshield', 'starfall'], desc: '开局护盾 +12%，持有护盾时伤害 +15%。', mods: { startShieldPct: 0.12, shieldDmgPct: 0.15 } },
-  { id: 'nova_storm', name: '冰雷暴', glyph: '雹', pair: ['icenova', 'stormfield'], desc: '元素反应伤害 +25%，缓速 +8%。', mods: { reactionDmgPct: 0.25, slowPct: 0.08 } }
+  { id: 'solar_meteor', name: '日陨', glyph: '陨', pair: ['meteor', 'sunbeam'], tier: 'major', resonance: 3, desc: '元素反应伤害 +25%，对首领伤害 +10%。', mods: { reactionDmgPct: 0.25, bossDmgPct: 0.1 } },
+  { id: 'frost_grave', name: '霜墓', glyph: '霜', pair: ['frost', 'icenova'], tier: 'major', resonance: 3, desc: '缓速 +10%，元素反应伤害 +20%。', mods: { slowPct: 0.1, reactionDmgPct: 0.2 } },
+  { id: 'thunder_cage', name: '雷牢', glyph: '牢', pair: ['chain', 'stormfield'], tier: 'major', resonance: 3, desc: '元素反应伤害 +25%，雷暴牵引更强。', mods: { reactionDmgPct: 0.25 }, flags: ['stormBoost'] },
+  { id: 'void_event', name: '事件视界', glyph: '界', pair: ['voidrift', 'singularity'], tier: 'major', resonance: 3, desc: '技能强度 +25%，护盾上限提升。', mods: { abilityPowerPct: 0.25 }, flags: ['shieldCap'] },
+  { id: 'star_crown', name: '星冕', glyph: '冕', pair: ['starshield', 'starfall'], tier: 'major', resonance: 3, desc: '开局护盾 +10%，对首领伤害 +15%。', mods: { startShieldPct: 0.1, bossDmgPct: 0.15 } },
+  { id: 'blood_moon', name: '血月', glyph: '月', pair: ['bloodrite', 'bloodmoon'], tier: 'major', resonance: 3, desc: '吸血 +12%，击杀回复生命。', mods: { lifestealPct: 0.12 }, flags: ['killHeal'] },
+  { id: 'ember_brand', name: '雷鸦', glyph: '鸦', pair: ['embergun', 'thunderbrand'], tier: 'major', resonance: 3, desc: '普攻伤害 +20%，弹射 +1 目标。', mods: { basicDmgPct: 0.2, basicChain: 1 } }
 ];
 
 const SYNERGIES = RAW_SYNERGIES.map((synergy) => {
-  const tier = synergy.tier === 'major' ? 'major' : 'normal';
-  const resonance = synergy.resonance || (tier === 'major' ? 4 : 3);
+  const tier = 'major';
+  const resonance = synergy.resonance || 3;
   return {
     ...synergy,
     tier,
@@ -7623,6 +7607,10 @@ const LEGACY_COSTS = Object.fromEntries([
   ...LEGACY_SYNERGY_IDS.map((id, index) => [id, 60 + index * 6]),
   ...FUSIONS.map((fusion, index) => [fusion.id, 420 + index * 80])
 ]);
+
+function legacyComboCost(id) {
+  return LEGACY_COSTS[id] || 0;
+}
 
 const COMBO_SHOP = [
   ...SYNERGIES.map((synergy) => ({
@@ -8884,6 +8872,7 @@ function rollPlayerDamage(run, target) {
   if (stats.belowHalfDmg > 0 && run.hp < run.maxHp * 0.5) dmg *= 1 + stats.belowHalfDmg;
   if (stats.lastStand > 0 && run.hp < run.maxHp * 0.3) dmg *= 1 + stats.lastStand;
   if (stats.shieldDmgPct > 0 && run.shield > 0) dmg *= 1 + stats.shieldDmgPct;
+  if (target && target.boss) dmg *= 1 - (BAL.bossDebuff?.playerDamageReduction || 0);
   if (stats.bossDmg > 0 && target && target.boss) dmg *= 1 + stats.bossDmg;
   if (stats.execute > 0 && target && target.hp < target.maxHp * 0.3) dmg *= 1 + stats.execute;
   for (const buff of run.buffs) {
@@ -10112,6 +10101,11 @@ function castAbility(run, id) {
     run.shadowUntil = run.elapsed + 5 + skillTraitLevel(run, 'shadow', 'duration');
     run.shadowDmg = attack * 0.38 * (1 + 0.15 * skillTraitLevel(run, 'shadow', 'damage'));
     pushEvent(events, { type: 'ring', x: player.x, y: player.y, radius: 38, color: def.color });
+  } else if (behavior === 'fusionBarrage') {
+    fireFan(run, 8 + extra, 1.35, 620, {
+      dmg: attack * 0.55, radius: 5, life: 1.2, element: 'fire', color: def.color, kind: 'ember', pierce: 1
+    });
+    chainLightning(run, 5, attack * 0.9, events, 'shock');
   } else {
     return { ok: false, reason: '未知行为' };
   }
@@ -10924,7 +10918,7 @@ function hydrateMeta(raw) {
   if (version < 4) {
     // v4 一次性退款：优先购买记录；旧档没有记录时回退到已解锁 ID。
     const purchaseIds = legacyComboPurchaseIds(data, unlockedIds);
-    const refund = purchaseIds.reduce((sum, id) => sum + ((COMBO_BY_ID[id] && COMBO_BY_ID[id].legacyCost) || 0), 0);
+    const refund = purchaseIds.reduce((sum, id) => sum + legacyComboCost(id), 0);
     meta.embers += refund;
     meta.records.comboRefundV4 = { amount: refund, comboIds: purchaseIds };
   }
@@ -15582,7 +15576,7 @@ let lastBossId = null;
 let selectedAbilityId = null;
 
 const ABILITY_KEYS = ['1', '2', '3', '4', '5', '6'];
-const ROLE_NAMES = { rapid: '速射', normal: '普通', heavy: '重型', fusion: '合成' };
+const ROLE_NAMES = { rapid: '速射', normal: '普通', heavy: '重型', fusion: '融合' };
 const ELEMENT_NAMES = { fire: '火', ice: '冰', shock: '雷', void: '虚' };
 
 function byId(id) {
@@ -15731,9 +15725,8 @@ function renderIdle(ctx) {
         h('span', { class: 'tag subtle' }, `${COMBO_SHOP.length} 项全部可见`)
       ),
       h('div', { class: 'combo-rule-grid' },
-        h('div', { class: 'combo-rule' }, h('b', {}, '普通共鸣'), h('span', {}, '双方各 3 点')),
-        h('div', { class: 'combo-rule' }, h('b', {}, '强共鸣'), h('span', {}, '双方各 4 点')),
-        h('div', { class: 'combo-rule' }, h('b', {}, '技能合成'), h('span', {}, '双方各 4 点 + 均进阶'))
+        h('div', { class: 'combo-rule' }, h('b', {}, '进阶共鸣'), h('span', {}, '双方各 3 点')),
+        h('div', { class: 'combo-rule' }, h('b', {}, '融合共鸣'), h('span', {}, '双方各 4 点 + 均进阶'))
       )
     )
   );
@@ -15836,7 +15829,7 @@ function renderAbilityDetail(ctx) {
   delveEls.abilityDetailMeta.textContent = `${ROLE_NAMES[role] || '主动'} · ${element} · ${ability.type || ability.behavior}`;
   delveEls.abilityDetailDesc.textContent = ability.desc(run.stats.abilityPower);
   const isFusion = role === 'fusion';
-  const resonance = isFusion ? '合成技能' : `共鸣 ${resonanceOf(run, selectedAbilityId)} · 进阶 ${run.skillTree?.[`advanced_${selectedAbilityId}`] ? '已点亮' : `${run.skillNumericCounts?.[selectedAbilityId] || 0}/3`}`;
+  const resonance = isFusion ? '融合技能' : `共鸣 ${resonanceOf(run, selectedAbilityId)} · 进阶 ${run.skillTree?.[`advanced_${selectedAbilityId}`] ? '已点亮' : `${run.skillNumericCounts?.[selectedAbilityId] || 0}/3`}`;
   clear(delveEls.abilityDetailStats).append(
     h('span', {}, `基础冷却 ${ability.cd.toFixed(1)}s`),
     h('span', { class: 'ability-current-cd' }, `实际冷却 ${abilityCooldown(run, selectedAbilityId).toFixed(2)}s`),
@@ -15990,7 +15983,8 @@ function renderTags(ctx) {
     class: 'tag subtle',
     'aria-label': nextSlot ? `等级 ${nextSlot.level} 解锁第 ${nextSlot.slots} 个技能槽` : '技能槽已全部解锁'
   }, `技能 ${run.abilities.length}/${cap}`));
-  if ((run.fusions || []).length) tags.push(h('span', { class: 'tag hot' }, `合成 ×${run.fusions.length}`));
+  if ((run.fusions || []).length) tags.push(h('span', { class: 'tag hot' }, `融合 ×${run.fusions.length}`));
+  tags.push(h('span', { class: 'tag subtle', title: '角色对首领造成的伤害降低 15%' }, '首领减伤 15%'));
   clear(delveEls.tags).append(...tags);
 }
 
@@ -16079,7 +16073,7 @@ function refreshRunPanels(ctx, full = false) {
   if (delveEls.synergyCount) delveEls.synergyCount.textContent = `${synergies.length + (run.fusions || []).length}`;
   clear(delveEls.synergyList);
   if (!synergies.length && !(run.fusions || []).length) {
-    delveEls.synergyList.append(h('div', { class: 'synergy-empty' }, '普通组合双方各 3 点，强共鸣各 4 点；数值强化与进阶会积累共鸣。'));
+    delveEls.synergyList.append(h('div', { class: 'synergy-empty' }, '每个技能只有一个搭档；进阶共鸣双方各 3 点，融合共鸣各 4 点且均进阶。'));
   } else {
     for (const synergy of synergies) {
       delveEls.synergyList.append(
@@ -16098,7 +16092,7 @@ function refreshRunPanels(ctx, full = false) {
       delveEls.synergyList.append(
         h('div', { class: 'synergy-chip fusion' },
           h('i', {}, ability.glyph),
-          h('span', { class: 'synergy-chip-text' }, h('b', {}, `合成 · ${ability.name}`), h('small', {}, '双方 4 点共鸣且均进阶，已合成'))
+          h('span', { class: 'synergy-chip-text' }, h('b', {}, `融合 · ${ability.name}`), h('small', {}, '双方 4 点共鸣且均进阶，已融合'))
         )
       );
     }
@@ -16205,8 +16199,8 @@ function handleDelveEvents(ctx, events) {
         break;
       case 'fusion': {
         const ability = ALL_ABILITY_BY_ID[event.id];
-        banner(`合成 · ${ability ? ability.name : event.name}`, 'FUSION FORGED', 'boss');
-        ctx.toast(`技能合成：${ability ? ability.name : event.name}`, 'success');
+        banner(`融合共鸣 · ${ability ? ability.name : event.name}`, 'FUSION FORGED', 'boss');
+        ctx.toast(`融合共鸣：${ability ? ability.name : event.name}`, 'success');
         buildAbilityBar(ctx, true);
         refreshRunPanels(ctx);
         break;
@@ -16311,13 +16305,13 @@ function section(title, subtitle, body) {
 function guideSection() {
   const steps = [
     ['走位与射击', 'WASD / 方向键（触屏拖动战斗区）移动。角色自动锁敌射击；开局没有主动技能，首次升级时选择根节点获得技能。'],
-    ['14 技能与 6 格', '14 个主动技能分为速射（0.7–1.4 秒）、普通（4.5–8 秒）与重型（9–12 秒）。技能槽在深度 1 / 8 / 15 / 24 / 35 / 48 解锁 1–6 格，技能栏始终保留占位。'],
+    ['14 技能与技能格', '14 个基础技能分为速射、普通与重型，另有层专属技能。技能槽按等级 1/4/7/10/13/16 解锁，且每层有独立上限。'],
     ['技能详情与冷却', '点击圆形技能图标查看名称、元素、真实冷却与共鸣；手机无需 hover。HUD 冷却由引擎按基础 cd、CDR 与技能冷却强化共同结算。'],
     ['升级三选一', '每次升级混合三类：树节点卡、可重复的技能随机数值卡、普通卡牌。每张都会标注类别与关键收益；手机可横向滑动。'],
     ['43 节点只读星图', '核心 + 14 根节点 + 14 进阶 + 14 跨系，共 43 个节点。星图可缩放与聚焦分支，但不能购买或直接加点，只能经升级三选一点亮。'],
     ['进阶与共鸣值', '每个技能获得 3 次数值强化后可选取进阶。共鸣值 = 数值强化次数 +（进阶已点亮 ? 1 : 0）。'],
-    ['普通 / 强共鸣', '全部组合免费可见。普通组合需双方各 3 点共鸣，强共鸣需双方各 4 点；达标后自动生效，图鉴会显示每个组件的进度。'],
-    ['技能合成', '冰火陨星、雷狱裂隙、血誓星盾需组件双方各 4 点共鸣且都点亮进阶，合成卡才会进入三选一；合成后保留相关共鸣。'],
+    ['进阶共鸣', '每个技能只有一个唯一搭档。双方各 3 点共鸣后自动生效，图鉴会显示每个组件的进度。'],
+    ['融合共鸣', '每对技能对应一个融合形态，需双方各 4 点共鸣且都点亮进阶；融合卡进入三选一，融合后只占一个技能格并保留组件共鸣。'],
     ['元素印记', '火 / 冰 / 雷 / 虚技能命中会留下元素印记。两个不同元素相遇触发蒸发、超载、超导、燃魂、湮灭或雷暴。'],
     ['层 = 一局', '每层是独立一局：从主页选层进入，连续刷怪，击败本层 Boss 后通关并解锁下一层。'],
     ['魂火与轮回', '死亡或主动撤退都会结算魂火，用于余烬祭坛永久强化；达到门槛可轮回换星屑。组合图鉴不消耗魂火，也不写解锁存档。'],
@@ -16402,7 +16396,7 @@ function abilitySection() {
           )
         )
       ),
-      h('div', { class: 'section-subhead' }, '合成技能 · 凑齐组件后从升级卡中获得'),
+      h('div', { class: 'section-subhead' }, '融合共鸣 · 凑齐组件后从升级卡中获得'),
       h('div', { class: 'codex-grid' },
         FUSIONS.map((fusion) =>
           h('article', { class: 'codex-item fusion-item' },
@@ -16689,15 +16683,15 @@ function cleanDescription(combo) {
 }
 
 function comboType(combo) {
-  if (combo.kind === 'fusion') return '合成';
-  return combo.tier === 'major' ? '强共鸣' : '普通共鸣';
+  if (combo.kind === 'fusion') return '融合共鸣';
+  return '进阶共鸣';
 }
 
 function statusOf(ctx, combo, state) {
   if (!ctx.run) return { label: '待下潜', tone: 'planning' };
   if (combo.kind === 'fusion') {
     if ((ctx.run.fusions || []).includes(combo.id)) return { label: '已生效', tone: 'active' };
-    if (state.active) return { label: '可合成 · 等待三选一', tone: 'ready' };
+    if (state.active) return { label: '可融合 · 等待三选一', tone: 'ready' };
   } else if (state.active) return { label: '已生效', tone: 'active' };
   if (!state.owned) return { label: '未集齐技能', tone: 'locked' };
   return { label: '未成型', tone: 'progress' };
@@ -16767,8 +16761,7 @@ function comboSection(ctx, title, subtitle, combos) {
 
 function renderCombos(ctx) {
   if (!comboEl) return;
-  const normal = COMBO_SHOP.filter((combo) => combo.kind === 'synergy' && combo.tier !== 'major');
-  const major = COMBO_SHOP.filter((combo) => combo.kind === 'synergy' && combo.tier === 'major');
+  const major = COMBO_SHOP.filter((combo) => combo.kind === 'synergy');
   const fusions = COMBO_SHOP.filter((combo) => combo.kind === 'fusion');
   const activeCount = ctx.run
     ? COMBO_SHOP.filter((combo) => combo.kind === 'fusion'
@@ -16780,20 +16773,18 @@ function renderCombos(ctx) {
     h('section', { class: 'panel combo-hero' },
       h('p', { class: 'eyebrow' }, 'COMBO CODEX · ALL VISIBLE'),
       h('h2', {}, '组合图鉴 · 规划下一次共鸣'),
-      h('p', { class: 'lead' }, '所有组合免费可见，无需解锁。共鸣值来自技能数值强化与进阶；达到门槛后普通 / 强共鸣自动生效，合成则进入升级三选一。'),
+      h('p', { class: 'lead' }, '每个技能只有一个唯一搭档。进阶共鸣双方各 3 点生效；融合共鸣需双方各 4 点且均进阶，融合后只占一个技能格。'),
       h('div', { class: 'combo-stats' },
-        h('span', {}, `共 ${COMBO_SHOP.length} 项 · 普通 ${normal.length} · 强共鸣 ${major.length} · 合成 ${fusions.length}`),
+        h('span', {}, `共 ${COMBO_SHOP.length} 项 · 进阶共鸣 ${major.length} · 融合共鸣 ${fusions.length}`),
         h('span', {}, ctx.run ? `本局已生效 ${activeCount} 项` : '局外目标规划 · 当前进度从 0 开始')
       )
     ),
     h('div', { class: 'combo-rule-grid combo-page-rules' },
-      h('div', { class: 'combo-rule' }, h('b', {}, '普通共鸣'), h('span', {}, '双方各 3 点')),
-      h('div', { class: 'combo-rule' }, h('b', {}, '强共鸣'), h('span', {}, '双方各 4 点')),
-      h('div', { class: 'combo-rule' }, h('b', {}, '合成'), h('span', {}, '双方各 4 点 + 均进阶'))
+      h('div', { class: 'combo-rule' }, h('b', {}, '进阶共鸣'), h('span', {}, '双方各 3 点')),
+      h('div', { class: 'combo-rule' }, h('b', {}, '融合共鸣'), h('span', {}, '双方各 4 点 + 均进阶'))
     ),
-    comboSection(ctx, '普通共鸣', '双方各 3 点共鸣后自动生效', normal),
-    comboSection(ctx, '强共鸣', '双方各 4 点共鸣后自动生效', major),
-    comboSection(ctx, '技能合成', '双方各 4 点且均进阶后，合成卡进入升级三选一', fusions)
+    comboSection(ctx, '进阶共鸣', '双方各 3 点共鸣后自动生效', major),
+    comboSection(ctx, '融合共鸣', '双方各 4 点且均进阶后，融合卡进入升级三选一，融合后只占一格', fusions)
   ));
 }
 
@@ -17362,9 +17353,9 @@ function buildDraft(ctx, spec) {
         class: `draft-card draft-kind-card${fusion ? ' fusion-card' : ''}${unlock ? ' unlock-card' : ''}${card.desc ? ' has-desc' : ''}`,
         style: `--rar:${color}`,
         onclick: pick,
-        'aria-label': `${fusion ? '合成卡' : '普通卡牌'}：${card.name}`
+        'aria-label': `${fusion ? '融合卡' : '普通卡牌'}：${card.name}`
       },
-        h('span', { class: 'draft-rarity' }, fusion ? '合成卡 · 双方 4 + 进阶' : unlock ? '技能卡' : `普通卡牌 · ${rarity.name}`),
+        h('span', { class: 'draft-rarity' }, fusion ? '融合卡 · 双方 4 + 进阶' : unlock ? '技能卡' : `普通卡牌 · ${rarity.name}`),
         h('span', { class: 'draft-index' }, index + 1),
         h('span', { class: 'draft-glyph' }, card.glyph),
         h('span', { class: 'draft-name' }, card.name),
@@ -17587,7 +17578,7 @@ function buildTutorial(ctx) {
     ['14 技能 · 6 格', '14 个基础技能分为速射、普通与重型，另有层专属技能。技能槽按玩家等级 1 / 4 / 7 / 10 / 13 / 16 解锁，且每层有独立上限；点击圆形图标可查看真实冷却和技能详情。'],
     ['层 = 一局', '每层是独立一局：主页选层，连续刷怪，击败本层 Boss 后通关并解锁下一层；每局两次商店，每次最多买一件。'],
     ['43 节点只读星图', '按 T 查看 43 节点星图，可缩放、拖动或聚焦单条分支。星图不能直接加点；根节点、进阶与跨系节点都来自升级三选一。'],
-    ['组合无需购买', '普通组合需双方各 3 点共鸣，强共鸣各 4 点；合成需双方各 4 点且都点亮进阶。数值强化与进阶积累共鸣，组合图鉴只用于查看目标与进度。'],
+    ['组合无需购买', '每个技能只有一个唯一搭档。进阶共鸣双方各 3 点；融合共鸣需双方各 4 点且都点亮进阶，融合后只占一个技能格。'],
     ['带回魂火', '死亡或主动撤退都会结算魂火。魂火用于余烬祭坛的永久强化；达到深度门槛可轮回换星屑。'],
     ['自动战斗', '开启「自动」后 AI 会走位、放技能、选卡并在死亡后继续下一局。也可只关闭自动弹幕，用 1–6 或技能详情面板手动施法。']
   ];
