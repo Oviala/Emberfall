@@ -6227,7 +6227,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-14T03:01:37.707Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-15T02:59:10.389Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -8358,6 +8358,8 @@ function availableSkillTraitChoices(run) {
 }
 
 function availableLayerSkillChoices(run) {
+  // 技能格已满时不再提供新的层专属技能，避免学习后挤掉已有技能。
+  if ((run.abilities || []).length >= (run.skillCap || 1)) return [];
   return layerSkillsFor(run.layer)
     .filter((id) => !(run.layerSkillIds || []).includes(id) && !(run.abilities || []).includes(id))
     .map((id) => ALL_ABILITY_BY_ID[id])
@@ -10390,6 +10392,9 @@ function chooseCard(run, cardId) {
     return { ok: true, skillUpgrade: true, skill: choice.skill, name: choice.name, events: [{ type: 'skillUpgrade', id: choice.skill, name: choice.name, stat: choice.stat, value: choice.value }] };
   }
   if (choice.kind === 'layerSkill') {
+    if ((run.abilities || []).length >= (run.skillCap || 1) && !(run.layerSkillIds || []).includes(choice.skill)) {
+      return { ok: false, reason: '技能格已满，无法学习新的层专属技能' };
+    }
     run.draft = null;
     run.layerSkillIds = run.layerSkillIds || [];
     if (!run.layerSkillIds.includes(choice.skill)) run.layerSkillIds.push(choice.skill);
