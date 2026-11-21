@@ -6018,7 +6018,7 @@ body.reduce-motion *::after {
   position: absolute;
   right: clamp(10px, 5vw, 64px);
   top: 50%;
-  width: clamp(190px, 24vw, 310px);
+  width: clamp(210px, 26vw, 340px);
   transform: translateY(-48%);
   z-index: 1;
   pointer-events: none;
@@ -6317,7 +6317,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-21T15:22:18.389Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-21T15:27:56.161Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -15559,7 +15559,8 @@ function drawEnemyShots(c, run) {
 function drawPlayer(c, run) {
   const player = run.player;
   const t = world.time;
-  const r = player.radius;
+  // 视觉体积放大，实际碰撞半径不变。
+  const r = player.radius * 1.35;
   const bob = Math.sin(t * 2.1) * 1.1;
   c.save();
   c.translate(player.x, player.y);
