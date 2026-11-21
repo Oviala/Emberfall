@@ -6013,6 +6013,96 @@ body.reduce-motion *::after {
   outline: none;
 }
 
+/* 主页角色展示：分层立绘 + 玻璃底座 */
+.idle-hero-art {
+  position: absolute;
+  right: clamp(10px, 5vw, 64px);
+  top: 50%;
+  width: clamp(190px, 24vw, 310px);
+  transform: translateY(-48%);
+  z-index: 1;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 26px 46px rgba(0, 0, 0, 0.45));
+}
+
+.idle-figure-halo {
+  position: absolute;
+  width: 76%;
+  aspect-ratio: 1;
+  top: 16%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 125, 71, 0.24), transparent 62%),
+    radial-gradient(circle at 62% 38%, rgba(180, 140, 255, 0.16), transparent 55%);
+  filter: blur(12px);
+  animation: idle-figure-halo 6s ease-in-out infinite;
+}
+
+@keyframes idle-figure-halo {
+  0%, 100% { opacity: 0.65; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.idle-figure {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: idle-figure-float 7s ease-in-out infinite;
+}
+
+@keyframes idle-figure-float {
+  0%, 100% { transform: translateY(0) rotate(-0.4deg); }
+  50% { transform: translateY(-9px) rotate(0.5deg); }
+}
+
+.idle-figure-caption {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: -6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 14, 18, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.idle-figure-caption span {
+  font-family: var(--font-num);
+  font-size: 7px;
+  letter-spacing: 0.24em;
+  color: rgba(255, 214, 170, 0.55);
+}
+
+.idle-figure-caption b {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #ffe6c8;
+}
+
+@media (max-width: 1100px) {
+  .idle-hero-art {
+    opacity: 0.35;
+    right: -24px;
+    width: 220px;
+  }
+}
+
+@media (max-width: 720px) {
+  .idle-hero-art {
+    display: none;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -6227,7 +6317,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-15T02:59:10.389Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-21T15:22:18.389Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -15469,58 +15559,159 @@ function drawEnemyShots(c, run) {
 function drawPlayer(c, run) {
   const player = run.player;
   const t = world.time;
+  const r = player.radius;
+  const bob = Math.sin(t * 2.1) * 1.1;
   c.save();
   c.translate(player.x, player.y);
-  // 冲刺残影
-  if (player.invuln > 0) {
-    c.globalAlpha = 0.5;
-  }
-  // 外圈
+  if (player.invuln > 0) c.globalAlpha = 0.55;
+
+  // 地面投影：先把角色从地面上“抬起来”
   c.save();
-  c.rotate(t * 0.9);
-  c.strokeStyle = 'rgba(255,170,110,0.45)';
-  c.lineWidth = 1.6;
-  c.setLineDash([5, 7]);
+  c.globalAlpha *= 0.55;
+  const shadow = c.createRadialGradient(0, r * 0.85, 1, 0, r * 0.85, r * 1.25);
+  shadow.addColorStop(0, 'rgba(0,0,0,0.55)');
+  shadow.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = shadow;
   c.beginPath();
-  c.arc(0, 0, player.radius + 10, 0, Math.PI * 2);
+  c.ellipse(0, r * 0.9, r * 1.1, r * 0.36, 0, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+
+  c.translate(0, bob);
+
+  // 外层气场
+  c.save();
+  c.rotate(t * 0.8);
+  c.strokeStyle = 'rgba(255,170,110,0.4)';
+  c.lineWidth = 1.4;
+  c.setLineDash([5, 8]);
+  c.beginPath();
+  c.arc(0, 0, r + 11, 0, Math.PI * 2);
   c.stroke();
   c.restore();
-  // 本体
-  c.shadowColor = FIRE;
-  c.shadowBlur = 26;
-  const grad = c.createRadialGradient(0, -4, 2, 0, 0, player.radius + 6);
-  grad.addColorStop(0, '#ffe0b8');
-  grad.addColorStop(0.5, '#ff9a58');
-  grad.addColorStop(1, '#5a1f0c');
-  c.fillStyle = grad;
+
+  // 背后的残烬披风
+  const cloak = c.createLinearGradient(0, -r, 0, r * 1.4);
+  cloak.addColorStop(0, 'rgba(92,42,28,0.94)');
+  cloak.addColorStop(0.55, 'rgba(45,24,24,0.9)');
+  cloak.addColorStop(1, 'rgba(16,12,16,0.82)');
+  c.fillStyle = cloak;
+  c.strokeStyle = 'rgba(255,160,100,0.32)';
+  c.lineWidth = 1.2;
   c.beginPath();
-  c.arc(0, 0, player.radius, 0, Math.PI * 2);
+  c.moveTo(-r * 0.92, -r * 0.15);
+  c.quadraticCurveTo(-r * 1.5, r * 0.55, -r * 1.15, r * 1.18);
+  c.quadraticCurveTo(-r * 0.42, r * 1.42, 0, r * 1.22);
+  c.quadraticCurveTo(r * 0.42, r * 1.42, r * 1.15, r * 1.18);
+  c.quadraticCurveTo(r * 1.5, r * 0.55, r * 0.92, -r * 0.15);
+  c.closePath();
+  c.fill();
+  c.stroke();
+
+  // 披风内衬的余烬裂纹
+  c.save();
+  c.globalAlpha = 0.55;
+  c.strokeStyle = '#ff7d47';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(-r * 0.62, r * 0.42);
+  c.lineTo(-r * 0.25, r * 0.75);
+  c.lineTo(-r * 0.48, r * 1.02);
+  c.moveTo(r * 0.62, r * 0.42);
+  c.lineTo(r * 0.25, r * 0.75);
+  c.lineTo(r * 0.48, r * 1.02);
+  c.stroke();
+  c.restore();
+
+  // 深色躯干底
+  c.fillStyle = '#191018';
+  c.strokeStyle = 'rgba(255,180,120,0.5)';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.ellipse(0, r * 0.05, r * 0.82, r * 0.95, 0, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  // 本体发光核心
+  const body = c.createRadialGradient(-r * 0.28, -r * 0.32, 2, 0, 0, r * 0.9);
+  body.addColorStop(0, '#ffe6c0');
+  body.addColorStop(0.28, '#ffb26b');
+  body.addColorStop(0.62, '#c8552b');
+  body.addColorStop(1, '#3a1710');
+  c.fillStyle = body;
+  c.shadowColor = FIRE;
+  c.shadowBlur = 22;
+  c.beginPath();
+  c.arc(0, 0, r * 0.72, 0, Math.PI * 2);
   c.fill();
   c.shadowBlur = 0;
-  c.strokeStyle = 'rgba(255,225,190,0.85)';
-  c.lineWidth = 1.4;
-  c.stroke();
-  // 朝向
-  c.strokeStyle = 'rgba(255,220,170,0.8)';
-  c.lineWidth = 2;
+
+  // 肩甲
+  c.fillStyle = 'rgba(48,27,24,0.95)';
+  c.strokeStyle = 'rgba(255,190,130,0.5)';
+  c.lineWidth = 1.2;
+  for (const side of [-1, 1]) {
+    c.beginPath();
+    c.ellipse(side * r * 0.78, -r * 0.1, r * 0.36, r * 0.26, side * 0.3, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+  }
+
+  // 兜帽/头部
+  const hood = c.createLinearGradient(0, -r * 0.9, 0, -r * 0.1);
+  hood.addColorStop(0, '#3b2024');
+  hood.addColorStop(1, '#120d14');
+  c.fillStyle = hood;
   c.beginPath();
-  c.moveTo(player.facingX * player.radius * 0.6, player.facingY * player.radius * 0.6);
-  c.lineTo(player.facingX * (player.radius + 12), player.facingY * (player.radius + 12));
+  c.moveTo(-r * 0.62, -r * 0.2);
+  c.quadraticCurveTo(-r * 0.78, -r * 1.08, 0, -r * 1.12);
+  c.quadraticCurveTo(r * 0.78, -r * 1.08, r * 0.62, -r * 0.2);
+  c.closePath();
+  c.fill();
+  c.strokeStyle = 'rgba(255,180,110,0.38)';
   c.stroke();
-  // 字形
-  c.fillStyle = '#2a0f06';
-  c.font = '22px "PingFang SC", sans-serif';
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  c.fillText('烬', 0, 1);
+  // 兜帽内的余烬眼缝
+  c.fillStyle = '#ffd166';
+  c.shadowColor = '#ff9a58';
+  c.shadowBlur = 12;
+  c.beginPath();
+  c.ellipse(0, -r * 0.56, r * 0.24, r * 0.075, 0, 0, Math.PI * 2);
+  c.fill();
+  c.shadowBlur = 0;
+
+  // 左上轮廓光
+  c.strokeStyle = 'rgba(255,244,220,0.8)';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.arc(0, 0, r * 0.71, Math.PI * 1.05, Math.PI * 1.62);
+  c.stroke();
+
+  // 胸核
+  c.fillStyle = '#fff2d6';
+  c.shadowColor = '#ffcf6b';
+  c.shadowBlur = 14;
+  c.beginPath();
+  c.arc(0, r * 0.12, r * 0.16, 0, Math.PI * 2);
+  c.fill();
+  c.shadowBlur = 0;
+
+  // 朝向
+  c.strokeStyle = 'rgba(255,220,170,0.85)';
+  c.lineWidth = 2;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(player.facingX * r * 0.62, player.facingY * r * 0.62);
+  c.lineTo(player.facingX * (r + 13), player.facingY * (r + 13));
+  c.stroke();
+
   // 护盾泡
   if (run.shield > 1) {
-    c.strokeStyle = 'rgba(201,179,255,0.55)';
+    c.strokeStyle = 'rgba(201,179,255,0.62)';
     c.lineWidth = 2;
     c.shadowColor = '#b48cff';
     c.shadowBlur = 16;
     c.beginPath();
-    c.arc(0, 0, player.radius + 12 + Math.sin(t * 3) * 1.5, 0, Math.PI * 2);
+    c.arc(0, 0, r + 12 + Math.sin(t * 3) * 1.5, 0, Math.PI * 2);
     c.stroke();
   }
   c.restore();
@@ -15843,7 +16034,8 @@ function renderIdle(ctx) {
       h('button', { class: 'btn btn-primary btn-lg', 'data-start-run': '' },
         '开始下潜', h('kbd', {}, 'Enter')
       ),
-      h('div', { class: 'idle-quick' }, quick.map((text) => h('span', {}, text)))
+      h('div', { class: 'idle-quick' }, quick.map((text) => h('span', {}, text))),
+      idleHeroArt()
     ),
     h('div', { class: 'idle-grid' },
       idleCard('HIGHEST LAYER', `第 ${meta.maxLayer || 1} 层`, `已通关 ${Math.max(0, (meta.maxLayer || 1) - 1)} 层`),
@@ -15863,6 +16055,62 @@ function renderIdle(ctx) {
   );
   clear(delveEls.idle).append(wrap);
   bindStartButtons(ctx, delveEls.idle);
+}
+
+function idleHeroArt() {
+  const wrap = h('div', { class: 'idle-hero-art', 'aria-hidden': 'true' });
+  wrap.innerHTML = `
+    <div class="idle-figure-halo"></div>
+    <svg class="idle-figure" viewBox="0 0 340 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="idleCloak" x1="80" y1="80" x2="270" y2="430" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#633226"/><stop offset=".45" stop-color="#2a1a22"/><stop offset="1" stop-color="#0d0b12"/>
+        </linearGradient>
+        <linearGradient id="idleCoat" x1="170" y1="120" x2="170" y2="410" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#4a2b2a"/><stop offset=".5" stop-color="#22151d"/><stop offset="1" stop-color="#0b0a10"/>
+        </linearGradient>
+        <radialGradient id="idleCore" cx="0" cy="0" r="1" gradientTransform="translate(170 236) rotate(90) scale(62)">
+          <stop stop-color="#fff4d2"/><stop offset=".35" stop-color="#ffcf6b"/><stop offset=".7" stop-color="#ff7d47"/><stop offset="1" stop-color="#7a2311" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="idleRim" x1="90" y1="100" x2="250" y2="330" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#ffe8c8" stop-opacity=".9"/><stop offset=".5" stop-color="#ffb26b" stop-opacity=".2"/><stop offset="1" stop-color="#ff7d47" stop-opacity="0"/>
+        </linearGradient>
+        <filter id="idleGlow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <ellipse cx="170" cy="424" rx="112" ry="26" fill="#05060a" opacity=".7"/>
+      <ellipse cx="170" cy="424" rx="86" ry="16" fill="#ff7d47" opacity=".08" filter="url(#idleGlow)"/>
+      <circle cx="170" cy="238" r="128" stroke="#ff9a58" stroke-opacity=".12"/>
+      <circle cx="170" cy="238" r="104" stroke="#ffd166" stroke-opacity=".1" stroke-dasharray="3 11"/>
+      <g class="idle-figure-body">
+        <path d="M170 118 C127 118 100 154 97 214 C94 278 78 330 68 405 C100 423 134 414 170 397 C206 414 240 423 272 405 C262 330 246 278 243 214 C240 154 213 118 170 118Z" fill="url(#idleCloak)" stroke="#ff9a58" stroke-opacity=".22"/>
+        <path d="M170 128 C143 128 125 158 124 212 C123 274 111 333 104 390 C130 401 153 392 170 376 C187 392 210 401 236 390 C229 333 217 274 216 212 C215 158 197 128 170 128Z" fill="url(#idleCoat)"/>
+        <path d="M124 212 C122 270 111 332 104 390" stroke="url(#idleRim)" stroke-width="2"/>
+        <path d="M216 212 C218 270 229 332 236 390" stroke="url(#idleRim)" stroke-width="1.2" opacity=".5"/>
+        <path d="M114 176 C99 186 91 205 94 226 C106 220 118 208 124 193Z" fill="#312029" stroke="#8d5946" stroke-opacity=".5"/>
+        <path d="M226 176 C241 186 249 205 246 226 C234 220 222 208 216 193Z" fill="#312029" stroke="#8d5946" stroke-opacity=".5"/>
+        <path d="M170 116 C139 116 126 146 127 178 C128 208 145 222 170 222 C195 222 212 208 213 178 C214 146 201 116 170 116Z" fill="#18111a" stroke="#8d5946" stroke-opacity=".45"/>
+        <path d="M137 184 C143 174 157 168 170 168 C183 168 197 174 203 184 C196 194 184 199 170 199 C156 199 144 194 137 184Z" fill="#08070b"/>
+        <path d="M148 184 C155 179 185 179 192 184 C185 188 155 188 148 184Z" fill="#ffd166" filter="url(#idleGlow)"/>
+        <path d="M170 214 C158 214 150 224 150 236 C150 251 158 260 170 260 C182 260 190 251 190 236 C190 224 182 214 170 214Z" fill="url(#idleCore)" filter="url(#idleGlow)"/>
+        <path d="M170 224 L179 237 L174 251 L166 251 L161 237Z" fill="#fff1cf" opacity=".9"/>
+        <path d="M133 257 L126 318 L145 306 L155 267Z" fill="#2c1d25" stroke="#9e6650" stroke-opacity=".35"/>
+        <path d="M207 257 L218 318 L199 303 L186 267Z" fill="#2c1d25" stroke="#9e6650" stroke-opacity=".35"/>
+        <path d="M252 200 L264 198 L270 394 L256 398Z" fill="#16111a" stroke="#8d5946" stroke-opacity=".55"/>
+        <path d="M252 200 L264 198 L270 394 L256 398Z" fill="url(#idleRim)" opacity=".12"/>
+        <circle cx="261" cy="190" r="17" fill="#ff7d47" opacity=".22" filter="url(#idleGlow)"/>
+        <circle cx="261" cy="190" r="9" fill="#ffcf6b" filter="url(#idleGlow)"/>
+        <circle cx="261" cy="190" r="3.5" fill="#fff6df"/>
+      </g>
+      <g opacity=".8">
+        <circle cx="92" cy="286" r="2" fill="#ffb26b"/><circle cx="250" cy="316" r="1.6" fill="#ffd166"/>
+        <circle cx="120" cy="354" r="1.4" fill="#ff7d47"/><circle cx="226" cy="374" r="1.2" fill="#ffcf6b"/>
+      </g>
+    </svg>
+    <div class="idle-figure-caption"><span>THE EMBER WALKER</span><b>余烬行者</b></div>
+  `;
+  return wrap;
 }
 
 function idleCard(label, value, note) {
