@@ -7799,6 +7799,311 @@ body::after {
   transform: translateY(-46%);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   立体像素 UI：硬边体积 / 阶梯阴影 / 像素装饰
+   基于 Codex 像素方案，适配真实 DOM
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --px-ink: #f5f0db;
+  --px-muted: #a8b2c8;
+  --px-bg: #090b12;
+  --px-panel: #171d2c;
+  --px-panel-2: #202941;
+  --px-line: #4b5a7d;
+  --px-line-bright: #8296c4;
+  --px-orange: #f08a48;
+  --px-orange-light: #ffc46b;
+  --px-cyan: #64d3d4;
+  --px-red: #d64f57;
+  --px-gold: #f5c85b;
+  --px-hard: 4px 4px 0 #07080d;
+  --px-hard-2: 7px 7px 0 #030409;
+}
+
+body {
+  background:
+    linear-gradient(135deg, transparent 75%, rgba(255, 255, 255, 0.018) 75%) 0 0 / 24px 24px,
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.012) 75%) 12px 12px / 24px 24px,
+    var(--px-bg);
+  color: var(--px-ink);
+}
+
+#arena-canvas {
+  image-rendering: pixelated;
+}
+
+/* 顶栏与导航：像素按钮 */
+header.topbar {
+  border-bottom: 4px solid #07080d;
+  background:
+    linear-gradient(90deg, rgba(240, 138, 72, 0.1), transparent 38%, rgba(100, 211, 212, 0.07)),
+    var(--px-panel);
+  box-shadow: 0 5px 0 #252d44, 0 9px 0 #080a11;
+}
+
+.brand {
+  color: var(--px-orange-light);
+  text-shadow: 3px 3px 0 #722c35, 6px 6px 0 #0a0b11;
+  letter-spacing: 0.12em;
+}
+
+.brand-text b {
+  color: var(--px-orange-light);
+  text-shadow: 3px 3px 0 #722c35, 5px 5px 0 #080a11;
+}
+
+.tabs {
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tab {
+  min-height: 40px;
+  border: 2px solid var(--px-line);
+  border-bottom-width: 4px;
+  border-radius: 0;
+  background: var(--px-bg);
+  color: var(--px-muted);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  box-shadow: 3px 3px 0 #080a11;
+  transform: translate(0, 0);
+}
+
+.tab:hover {
+  border-color: var(--px-orange);
+  color: var(--px-orange-light);
+  background: var(--px-panel-2);
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #080a11;
+}
+
+.tab.is-active {
+  border-color: var(--px-orange-light);
+  color: #28131a;
+  background: var(--px-orange);
+  box-shadow: 3px 3px 0 #8b353d, 6px 6px 0 #080a11;
+}
+
+/* 面板：硬边体积 */
+.panel,
+.idle-card,
+.idle-hero,
+.idle-build,
+.side-card,
+.modal,
+#combo-body,
+#codex-body {
+  border-width: 3px;
+  border-color: var(--px-line);
+  border-radius: 0;
+  box-shadow: var(--px-hard), var(--px-hard-2);
+  backdrop-filter: none;
+}
+
+.panel {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 35%),
+    var(--px-panel);
+}
+
+.idle-hero {
+  border-color: var(--px-orange);
+  background: var(--px-panel-2);
+  box-shadow: 8px 8px 0 #8d3c3c, 14px 14px 0 #080a11;
+}
+
+.idle-card {
+  background: var(--px-panel-2);
+}
+
+.idle-title {
+  color: var(--px-orange-light);
+  text-shadow: 5px 5px 0 #77333c, 10px 10px 0 #080a11;
+}
+
+/* 按钮：阶梯硬边 + 下压 */
+.btn,
+button,
+.icon-btn,
+.layer-select {
+  border-radius: 0;
+  border-width: 2px;
+  border-color: var(--px-line-bright);
+  background: var(--px-panel-2);
+  box-shadow: 4px 4px 0 #080a11;
+  transition: transform 0.1s steps(2), background 0.1s, border-color 0.1s;
+}
+
+.btn:hover,
+button:hover:not(:disabled),
+.icon-btn:hover {
+  border-color: var(--px-orange-light);
+  background: var(--px-panel-3, #29334e);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #080a11;
+}
+
+.btn:active,
+button:active:not(:disabled),
+.icon-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 #080a11;
+}
+
+.btn-primary {
+  border-color: var(--px-orange-light);
+  color: #28131a;
+  background: var(--px-orange);
+  box-shadow: 5px 5px 0 #8b353d, 9px 9px 0 #080a11;
+}
+
+.btn-primary:hover {
+  background: var(--px-orange-light);
+}
+
+/* 战斗舞台：像素网格与硬边框 */
+#stage.arena-stage,
+.arena-stage {
+  border: 4px solid var(--px-line);
+  border-radius: 0;
+  box-shadow: 8px 8px 0 #080a11, 13px 13px 0 #29334e;
+  background:
+    linear-gradient(0deg, rgba(6, 8, 14, 0.82), transparent 28%),
+    linear-gradient(90deg, rgba(100, 211, 212, 0.055) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(rgba(100, 211, 212, 0.055) 1px, transparent 1px) 0 0 / 32px 32px,
+    #111827;
+}
+
+#delve-active > .side#delve-side {
+  border-left: 3px solid var(--px-line);
+  background: linear-gradient(90deg, transparent, rgba(7, 11, 19, 0.92) 14%);
+}
+
+#delve-active > .side#delve-side > details.panel.side-card {
+  border-width: 3px;
+  border-radius: 0;
+  background: var(--px-panel);
+  box-shadow: 4px 4px 0 #080a11;
+}
+
+#delve-active > .side#delve-side > details.panel.side-card > summary {
+  background: var(--px-panel-2);
+  color: var(--px-orange-light);
+  letter-spacing: 0.1em;
+}
+
+/* HUD：像素框 */
+.hud .hud-top,
+.hud .hud-left .player-bars,
+.hud .hud-right #ability-bar,
+.hud .hud-right .skill-extra,
+.hud #stage-hint,
+.hud .boss-bar,
+.hud .hud-status .tag {
+  border: 3px solid var(--px-line-bright);
+  border-radius: 0;
+  background: rgba(13, 18, 32, 0.94);
+  box-shadow: 4px 4px 0 #080a11;
+}
+
+.hud .hud-right #ability-bar {
+  padding: 6px;
+}
+
+.skill-btn,
+.skill-slot-empty {
+  border-radius: 0;
+  border-width: 2px;
+  border-color: var(--px-line-bright);
+  box-shadow: 3px 3px 0 #080a11;
+}
+
+.skill-btn:hover,
+.skill-slot-empty:hover {
+  border-color: var(--px-orange-light);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #080a11;
+}
+
+.bar,
+.boss-track,
+.depth-progress-track {
+  border-radius: 0;
+  border: 2px solid #07080d;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.05), 2px 2px 0 #080a11;
+}
+
+.bar-fill,
+.boss-track i,
+.depth-progress-track i {
+  border-radius: 0;
+}
+
+/* 弹窗：像素浮雕 */
+.modal {
+  border-color: var(--px-orange);
+  background: var(--px-panel);
+  box-shadow: 8px 8px 0 #8d3c3c, 14px 14px 0 #080a11;
+}
+
+.modal-title {
+  color: var(--px-orange-light);
+  text-shadow: 3px 3px 0 #5c2930, 6px 6px 0 #080a11;
+}
+
+.modal-backdrop {
+  background: rgba(5, 7, 13, 0.86);
+  backdrop-filter: blur(2px);
+}
+
+.draft-card,
+.relic-choice,
+.shop-item {
+  border-width: 3px;
+  border-radius: 0;
+  box-shadow: 4px 4px 0 #080a11;
+}
+
+.draft-card:hover,
+.relic-choice:hover,
+.shop-item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #080a11;
+}
+
+/* 像素角标 */
+.panel::before,
+.idle-card::before,
+.side-card::before,
+.draft-card::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--px-orange);
+  box-shadow: 10px 0 0 var(--px-gold), 0 10px 0 var(--px-cyan);
+  pointer-events: none;
+  opacity: 0.9;
+  z-index: 2;
+}
+
+@media (max-width: 620px) {
+  .hud .hud-top,
+  .hud .hud-left .player-bars,
+  .hud .hud-right #ability-bar,
+  .hud .hud-right .skill-extra {
+    border-width: 2px;
+    box-shadow: 3px 3px 0 #080a11;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -8013,7 +8318,7 @@ body::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T09:30:47.797Z */
+/* Emberfall · 单文件构建 · 2026-11-22T09:45:55.078Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -18204,10 +18509,15 @@ function refreshRunPanels(ctx, full = false) {
 function handleDelveEvents(ctx, events) {
   const run = ctx.run;
   if (!run) return;
-  handleArenaEvents(ctx, run, events);
+  try {
+    handleArenaEvents(ctx, run, events);
+  } catch (error) {
+    console.error('[Emberfall] arena event error', error);
+  }
   let hitSound = 0;
   let hurtSound = 0;
   for (const event of events) {
+    try {
     switch (event.type) {
       case 'hit':
         if (hitSound < 3) {
@@ -18304,6 +18614,9 @@ function handleDelveEvents(ctx, events) {
         break;
       default:
         break;
+    }
+    } catch (error) {
+      console.error('[Emberfall] delve event error', event && event.type, error);
     }
   }
   if (run.autoSkills !== lastAutoSkills) {
@@ -20226,14 +20539,41 @@ function createApp() {
 
   function reportRuntimeError(error, where) {
     const now = performance.now();
+    const message = String((error && (error.message || error.reason)) || error || '未知错误');
     console.error(`[Emberfall] ${where} error`, error);
+    try {
+      localStorage.setItem('emberfall.lastError', JSON.stringify({
+        where,
+        message,
+        stack: String((error && error.stack) || ''),
+        at: new Date().toISOString(),
+        layer: run && run.layer,
+        elapsed: run && run.elapsed
+      }));
+    } catch {
+      /* 存储不可用时忽略 */
+    }
     if (!ui.lastRuntimeErrorAt || now - ui.lastRuntimeErrorAt > 4000) {
       ui.lastRuntimeErrorAt = now;
-      ctx.toast(where === 'render' ? '渲染异常，已尝试恢复；如仍卡住请刷新' : '战斗状态异常，已尝试恢复', 'error');
+      ctx.toast(where === 'render' ? `渲染异常：${message.slice(0, 40)}` : `战斗异常：${message.slice(0, 40)}`, 'error');
     }
     if (where === 'render') {
       // 让下一帧重新建立画布状态。
       lastFrame = now;
+    }
+    // 同一异常连续出现时，自动结算当前局，避免永久死机。
+    if (now - (ui.runtimeErrorWindowAt || 0) > 5000) {
+      ui.runtimeErrorWindowAt = now;
+      ui.runtimeErrorCount = 0;
+    }
+    ui.runtimeErrorCount = (ui.runtimeErrorCount || 0) + 1;
+    if (ui.runtimeErrorCount >= 8 && run && run.active) {
+      ui.runtimeErrorCount = 0;
+      try {
+        ctx.autoRetreat('战斗状态异常，已自动结算本局');
+      } catch (retreatError) {
+        console.error('[Emberfall] auto-retreat after error failed', retreatError);
+      }
     }
   }
 
