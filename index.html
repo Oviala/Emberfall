@@ -9232,6 +9232,23 @@ header.topbar {
   justify-self: end;
 }
 
+/* 小屏：主页内容超过一屏时从顶部开始，避免被网格居中顶出可视区 */
+@media (max-width: 900px) {
+  #delve-idle {
+    display: block;
+  }
+
+  #delve-idle .idle-wrap {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+
+  #delve-idle .idle-hero {
+    justify-content: flex-start;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -9512,7 +9529,7 @@ header.topbar {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T15:02:24.603Z */
+/* Emberfall · 单文件构建 · 2026-11-22T15:05:20.019Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
