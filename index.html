@@ -8835,6 +8835,45 @@ header.topbar {
   letter-spacing: 0.04em;
 }
 
+/* Emberfall 艺术字：系统幻想衬线优先，无外部字体依赖 */
+.brand-text b,
+#delve-idle .idle-title,
+.idle-title {
+  font-family:
+    "Luminari",
+    "Herculanum",
+    "Trattatello",
+    "Papyrus",
+    "Palatino Linotype",
+    "Baskerville",
+    "Times New Roman",
+    serif;
+  font-weight: 700;
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0.045em;
+}
+
+#delve-idle .idle-title {
+  text-shadow:
+    4px 4px 0 #6e3830,
+    8px 8px 0 rgba(6, 8, 14, 0.92),
+    0 0 26px rgba(240, 138, 72, 0.12);
+}
+
+.brand-text b {
+  font-family:
+    "Luminari",
+    "Herculanum",
+    "Trattatello",
+    "Papyrus",
+    "Palatino Linotype",
+    "Baskerville",
+    serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 </style>
 </head>
 <body>
@@ -9115,7 +9154,7 @@ header.topbar {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T10:07:55.646Z */
+/* Emberfall · 单文件构建 · 2026-11-22T10:09:22.377Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
