@@ -6317,7 +6317,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-21T15:27:56.161Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-22T00:14:07.024Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -18437,6 +18437,7 @@ function createApp() {
   let lastFrame = performance.now();
   let lastAutoSaveCheck = 0;
   const loop = setInterval(() => {
+    try {
     const now = performance.now();
     const dt = Math.min(3, (now - lastTick) / 1000);
     lastTick = now;
@@ -18455,6 +18456,7 @@ function createApp() {
         }
         if (events.length) handleDelveEvents(ctx, events);
       }
+      recoverPendingModal();
       syncAutomation(now);
       if (run && run.ended) handleRunEnd();
     } else {
@@ -18477,6 +18479,9 @@ function createApp() {
       ctx.save();
       lastAutoSaveCheck = Date.now();
     }
+    } catch (error) {
+      reportRuntimeError(error, 'simulation');
+    }
   }, 40);
 
   requestAnimationFrame(frame);
@@ -18484,11 +18489,43 @@ function createApp() {
   function frame(now) {
     const dt = Math.min(0.06, (now - lastFrame) / 1000);
     lastFrame = now;
-    if (run && run.active) {
-      updateRun(ctx);
-      renderFrame(ctx, run, dt);
+    try {
+      if (run && run.active) {
+        updateRun(ctx);
+        renderFrame(ctx, run, dt);
+      }
+    } catch (error) {
+      reportRuntimeError(error, 'render');
     }
     requestAnimationFrame(frame);
+  }
+
+  function recoverPendingModal() {
+    if (!run || !run.active) return;
+    if (run.draft && !hasModal()) {
+      openDraft(ctx);
+      return;
+    }
+    if (run.relicOffer && !hasModal()) {
+      openRelic(ctx);
+      return;
+    }
+    if (run.shopOffer && !hasModal()) {
+      openShop(ctx);
+    }
+  }
+
+  function reportRuntimeError(error, where) {
+    const now = performance.now();
+    console.error(`[Emberfall] ${where} error`, error);
+    if (!ui.lastRuntimeErrorAt || now - ui.lastRuntimeErrorAt > 4000) {
+      ui.lastRuntimeErrorAt = now;
+      ctx.toast(where === 'render' ? '渲染异常，已尝试恢复；如仍卡住请刷新' : '战斗状态异常，已尝试恢复', 'error');
+    }
+    if (where === 'render') {
+      // 让下一帧重新建立画布状态。
+      lastFrame = now;
+    }
   }
 
   function computeMoveInput() {
