@@ -8874,6 +8874,24 @@ header.topbar {
   letter-spacing: 0.02em;
 }
 
+/* 去掉最外层橙色描边（.is-active 误套到主视图） */
+.view,
+.view.is-active {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 去掉火焰 logo 图标 */
+.brand-mark,
+#delve-idle .idle-mark {
+  display: none !important;
+}
+
+.brand {
+  gap: 0;
+}
+
 </style>
 </head>
 <body>
@@ -9154,7 +9172,7 @@ header.topbar {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T10:09:22.377Z */
+/* Emberfall · 单文件构建 · 2026-11-22T10:12:20.284Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
