@@ -8897,6 +8897,341 @@ header.topbar {
   display: none !important;
 }
 
+/* 手机端兼容修正 */
+@media (max-width: 900px) {
+  /* 主页为底部 dock 留安全区，避免档案被导航压住 */
+  #delve-idle {
+    padding-bottom: 78px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #delve-idle .idle-wrap {
+    padding-bottom: 12px;
+  }
+
+  #delve-idle .idle-grid {
+    gap: 8px;
+    padding: 10px 12px 0;
+  }
+
+  #delve-idle .idle-card {
+    min-height: 82px;
+    padding: 9px 9px 7px;
+  }
+
+  #delve-idle .idle-card-label {
+    font-size: 7px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #delve-idle .idle-card b {
+    font-size: 18px;
+    line-height: 1.05;
+  }
+
+  #delve-idle .idle-card small {
+    font-size: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #delve-idle .idle-build {
+    margin-bottom: 82px;
+  }
+
+  /* 战斗顶部：窄屏只保留深度、进度、操作按钮 */
+  #delve-active > #stage.arena-stage > .hud .hud-top {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 6px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-top .depth-progress {
+    flex: 1 1 100px;
+    min-width: 80px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-top .hud-pressure,
+  #delve-active > #stage.arena-stage > .hud .hud-top .hud-tags {
+    display: none;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-actions {
+    margin-left: auto;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-actions .switch-label {
+    display: none;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-actions .switch-compact {
+    min-height: 32px;
+    padding: 0 4px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-actions .icon-btn {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    font-size: 12px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-left {
+    top: 64px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-left .player-bars {
+    padding: 5px 7px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    align-items: center;
+    flex-direction: column;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right #ability-bar {
+    flex-direction: row;
+    justify-content: center;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right .skill-extra {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  #delve-active > #stage.arena-stage > .hud #stage-hint {
+    bottom: 84px;
+    max-width: calc(100% - 16px);
+    font-size: 9px;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  /* 手机端弹窗全宽，避免右侧抽屉只占一半 */
+  .modal {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-left: 0;
+    border-top: 2px solid rgba(240, 138, 72, 0.35);
+    padding: 18px 14px 84px;
+    box-shadow: none;
+  }
+
+  .modal-backdrop {
+    padding: 0;
+  }
+
+  .modal .draft-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  #delve-idle .idle-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #delve-idle .idle-card b {
+    font-size: 17px;
+  }
+
+  #delve-idle .idle-grid {
+    padding-bottom: 0;
+  }
+
+  #delve-idle .idle-build {
+    margin-bottom: 82px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    bottom: 6px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud #stage-hint {
+    bottom: 78px;
+  }
+}
+
+/* 手机端兼容修正 2：技能栏单行、主页首屏完整 */
+@media (max-width: 900px) {
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    bottom: 4px;
+    left: 8px;
+    right: 8px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right #ability-bar {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 3px;
+    max-width: 100%;
+    overflow: visible;
+    padding: 4px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right #ability-bar .skill-btn,
+  #delve-active > #stage.arena-stage > .hud .hud-right #ability-bar .skill-slot-empty {
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right .skill-extra {
+    padding: 4px;
+    gap: 3px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud #stage-hint {
+    display: none;
+  }
+
+  #delve-idle .idle-hero {
+    min-height: 58vh;
+    padding-bottom: 40px;
+  }
+
+  #delve-idle .idle-grid {
+    margin-top: 2px;
+  }
+
+  #delve-idle .idle-card-label {
+    font-size: 7px !important;
+    letter-spacing: 0.02em !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+}
+
+@media (max-width: 620px) {
+  #delve-idle .idle-hero {
+    min-height: 54vh;
+  }
+
+  #delve-idle .idle-grid {
+    padding-bottom: 6px;
+  }
+}
+
+/* 手机端技能栏：冲刺/燃尽放到技能槽上方，避免被底部 dock 盖住 */
+@media (max-width: 900px) {
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    flex-direction: column-reverse;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right #ability-bar {
+    order: 2;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right .skill-extra {
+    order: 1;
+  }
+}
+
+/* 手机端：主内容高度让出底部 dock，战斗 HUD 不再被导航盖住 */
+@media (max-width: 900px) {
+  .main {
+    height: calc(100dvh - 64px);
+    min-height: 0;
+  }
+
+  #view-delve {
+    height: 100%;
+    inset: 0;
+  }
+
+  #delve-active,
+  #delve-active #stage,
+  #delve-active #stage .hud {
+    height: 100%;
+  }
+
+  #delve-idle {
+    height: 100%;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .main {
+    flex: 0 0 auto;
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
+  }
+}
+
+/* 手机端：商店/遗物弹窗占满宽度，商品纵向排列 */
+@media (max-width: 900px) {
+  .modal.shop-modal,
+  .modal.relic-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    left: 0;
+    right: 0;
+  }
+
+  .modal.shop-modal .shop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal.shop-modal .shop-item {
+    min-height: 118px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .modal.shop-modal .shop-item .shop-info {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  #modal-root > .modal-backdrop {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  #modal-root > .modal-backdrop > .modal {
+    width: 100%;
+    max-width: 100%;
+    justify-self: stretch;
+  }
+}
+
+/* 弹窗抽屉：网格列撑满，桌面端按设计宽度靠右，避免被 max-content 挤窄 */
+#modal-root > .modal-backdrop {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: stretch;
+}
+
+#modal-root > .modal-backdrop > .modal {
+  justify-self: end;
+}
+
 </style>
 </head>
 <body>
@@ -9177,7 +9512,7 @@ header.topbar {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T10:15:02.724Z */
+/* Emberfall · 单文件构建 · 2026-11-22T15:02:24.603Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -20633,7 +20968,7 @@ function buildShop(ctx) {
   const modal = h('div', { class: 'modal shop-modal' });
   mount(modal,
     h('div', { class: 'modal-head' },
-      h('p', { class: 'eyebrow' }, 'WAVE SHOP'),
+      h('p', { class: 'eyebrow' }, 'LAYER SHOP'),
       h('h2', { class: 'modal-title' }, '层间商店'),
       h('p', { class: 'modal-sub' }, '每局两次 · 每次免费限购 1 件')
     )
@@ -20652,7 +20987,7 @@ function buildShop(ctx) {
         h('small', {}, offer.kind === 'relic' ? '遗物' : '卡牌'),
         h('p', {}, offer.desc || '')
       ),
-      h('span', { class: 'shop-cost' }, offer.sold ? '已售出' : `✦ ${fmtInt(price)}`)
+      h('span', { class: 'shop-cost' }, offer.sold ? '已售出' : '免费')
     );
     mount(grid, button);
   });
