@@ -6317,7 +6317,7 @@ body.reduce-motion *::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-22T00:14:07.024Z */
+/* 烬渊 EMBERFALL · 单文件构建 · 2026-11-22T00:22:24.487Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
@@ -18110,6 +18110,7 @@ function createApp() {
     seenDraft: null,
     seenRelic: null,
     seenShop: null,
+    shopRecoveryAt: 0,
     autoShopAt: 0,
     autoChooseAt: 0,
     autoRelicAt: 0,
@@ -18502,16 +18503,28 @@ function createApp() {
 
   function recoverPendingModal() {
     if (!run || !run.active) return;
-    if (run.draft && !hasModal()) {
+    const visibleModal = !!document.querySelector('#modal-root .modal');
+    if (run.shopOffer && !visibleModal) {
+      // 商店状态已开启但弹窗没挂上：强制重开；再失败就跳过，避免永久暂停。
+      if (!ui.shopRecoveryAt) ui.shopRecoveryAt = performance.now();
+      if (hasModal()) closeModal(ctx);
+      openShop(ctx);
+      if (!document.querySelector('#modal-root .modal') && performance.now() - ui.shopRecoveryAt > 900) {
+        ui.shopRecoveryAt = 0;
+        run.shopOffer = null;
+        ctx.toast('商店界面异常，已跳过本次商店', 'error');
+      }
+      return;
+    }
+    ui.shopRecoveryAt = 0;
+    if (run.draft && !visibleModal) {
+      if (hasModal()) closeModal(ctx);
       openDraft(ctx);
       return;
     }
-    if (run.relicOffer && !hasModal()) {
+    if (run.relicOffer && !visibleModal) {
+      if (hasModal()) closeModal(ctx);
       openRelic(ctx);
-      return;
-    }
-    if (run.shopOffer && !hasModal()) {
-      openShop(ctx);
     }
   }
 
