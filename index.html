@@ -8104,6 +8104,546 @@ button:active:not(:disabled),
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   完全重构排版：左侧竖轨 / 电影式主页 / 侧挂战斗 HUD / 抽屉弹窗
+   ═══════════════════════════════════════════════════════════ */
+
+.main {
+  margin-left: 104px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#view-delve,
+#view-tree,
+#view-codex {
+  padding: 0;
+}
+
+/* 左侧竖向导航轨 */
+header.topbar {
+  position: fixed;
+  z-index: 60;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 104px;
+  height: 100vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 10px;
+  border-right: 4px solid #07080d;
+  border-bottom: 0;
+  background:
+    linear-gradient(180deg, rgba(240, 138, 72, 0.12), transparent 32%, rgba(100, 211, 212, 0.06)),
+    var(--px-panel);
+  box-shadow: 5px 0 0 #252d44, 9px 0 0 #080a11;
+}
+
+header.topbar::after {
+  display: none;
+}
+
+.brand {
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 0;
+}
+
+.brand-mark {
+  width: 52px;
+  height: 52px;
+}
+
+.brand-text {
+  align-items: center;
+}
+
+.brand-text b {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 19px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.brand-text small {
+  display: none;
+}
+
+.tabs {
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  overflow: visible;
+}
+
+.tab {
+  width: 74px;
+  height: 74px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+}
+
+.resources {
+  margin-top: auto;
+  justify-content: center;
+}
+
+/* 主页：全屏电影场景 + 悬浮档案 */
+#delve-idle {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+#delve-idle .idle-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+#delve-idle .idle-hero {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  padding: clamp(32px, 7vh, 96px) clamp(28px, 7vw, 110px) 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(60% 80% at 72% 45%, rgba(240, 138, 72, 0.16), transparent 62%),
+    radial-gradient(50% 70% at 22% 30%, rgba(100, 145, 182, 0.12), transparent 64%),
+    linear-gradient(105deg, #0e1523 0%, rgba(13, 19, 32, 0.88) 54%, rgba(8, 12, 20, 0.94) 100%);
+  box-shadow: none;
+}
+
+#delve-idle .idle-hero::before {
+  inset: 18px;
+  border: 1px solid rgba(239, 188, 116, 0.16);
+  border-radius: 0;
+}
+
+#delve-idle .idle-hero::after {
+  top: 12%;
+  right: 8%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 1px solid rgba(239, 188, 116, 0.18);
+  box-shadow:
+    0 0 0 24px rgba(240, 138, 72, 0.03),
+    0 0 0 56px rgba(240, 138, 72, 0.02);
+}
+
+#delve-idle .idle-mark {
+  margin: 0 0 10px;
+}
+
+#delve-idle .idle-overline,
+#delve-idle .idle-tagline,
+#delve-idle .idle-lead {
+  text-align: left;
+}
+
+#delve-idle .idle-title {
+  font-size: clamp(64px, 10.5vw, 150px);
+  line-height: 0.82;
+  letter-spacing: 0.015em;
+  color: #f4e5c8;
+  text-shadow:
+    6px 6px 0 #6e3830,
+    12px 12px 0 rgba(6, 8, 14, 0.9);
+}
+
+#delve-idle .idle-lead {
+  max-width: 460px;
+}
+
+#delve-idle .idle-hero-art {
+  right: clamp(4%, 8vw, 12%);
+  width: clamp(260px, 32vw, 470px);
+  opacity: 0.9;
+}
+
+#delve-idle .idle-grid {
+  position: absolute;
+  z-index: 6;
+  left: clamp(28px, 7vw, 110px);
+  bottom: 34px;
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+#delve-idle .idle-card {
+  width: clamp(130px, 13vw, 180px);
+  min-height: 0;
+  padding: 10px 14px;
+  border: 3px solid var(--px-line);
+  background: rgba(15, 21, 35, 0.9);
+  box-shadow: 4px 4px 0 #080a11;
+}
+
+#delve-idle .idle-card b {
+  font-size: 22px;
+}
+
+#delve-idle .idle-build {
+  position: absolute;
+  z-index: 6;
+  top: 96px;
+  right: 22px;
+  bottom: 120px;
+  width: min(270px, 23vw);
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border: 3px solid var(--px-line);
+  background: rgba(11, 16, 27, 0.9);
+  box-shadow: 5px 5px 0 #080a11;
+}
+
+#delve-idle .idle-build-head h2 {
+  font-size: 15px;
+}
+
+/* 战斗：全幅舞台 + 左侧信息坞 + 右侧竖向技能栏 */
+#delve-active {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+#delve-active > #stage.arena-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-top {
+  top: 16px;
+  left: 20px;
+  right: 20px;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-left {
+  top: 82px;
+  left: 20px;
+  width: min(280px, 30vw);
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-right {
+  top: 50%;
+  right: 18px;
+  bottom: auto;
+  left: auto;
+  transform: translateY(-50%);
+  width: auto;
+  max-width: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-right #ability-bar {
+  flex-direction: column;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-right .skill-extra {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+#delve-active > #stage.arena-stage > .hud #stage-hint {
+  left: 50%;
+  bottom: 16px;
+  max-width: 46vw;
+  white-space: normal;
+}
+
+#delve-active > .side#delve-side {
+  position: absolute;
+  z-index: 8;
+  top: 174px;
+  left: 18px;
+  right: auto;
+  bottom: 18px;
+  width: min(290px, 30vw);
+  padding: 6px;
+  overflow: auto;
+  border: 3px solid var(--px-line);
+  border-left: 3px solid var(--px-orange);
+  background: rgba(8, 13, 22, 0.9);
+  box-shadow: 5px 5px 0 #080a11;
+}
+
+#delve-active > .side#delve-side > details.panel.side-card {
+  border: 2px solid var(--px-line);
+  box-shadow: none;
+}
+
+/* 弹窗：右侧抽屉 */
+.modal-backdrop {
+  place-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.modal {
+  width: min(620px, 100%);
+  height: 100vh;
+  max-height: 100vh;
+  margin-left: auto;
+  padding: 28px;
+  border-width: 4px 0 4px 4px;
+  border-radius: 0;
+  overflow: auto;
+  background:
+    linear-gradient(180deg, rgba(240, 138, 72, 0.08), transparent 26%),
+    var(--px-panel);
+  box-shadow: -10px 0 0 #080a11;
+}
+
+.modal .draft-grid {
+  grid-template-columns: 1fr;
+}
+
+/* 手机：竖轨转为底部 dock，主页恢复纵向滚动 */
+@media (max-width: 900px) {
+  .main {
+    margin-left: 0;
+    height: calc(100vh - 64px);
+  }
+
+  header.topbar {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    height: 64px;
+    flex-direction: row;
+    gap: 8px;
+    padding: 6px 10px;
+    border-top: 4px solid #07080d;
+    border-right: 0;
+    box-shadow: 0 -5px 0 #252d44;
+  }
+
+  .brand {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand-text b {
+    writing-mode: horizontal-tb;
+    font-size: 15px;
+  }
+
+  .tabs {
+    flex-direction: row;
+    flex: 1;
+    gap: 5px;
+    overflow-x: auto;
+  }
+
+  .tab {
+    width: auto;
+    height: 42px;
+    min-width: 62px;
+    writing-mode: horizontal-tb;
+    padding: 0 10px;
+  }
+
+  .resources {
+    margin-top: 0;
+  }
+
+  #delve-idle {
+    height: auto;
+    min-height: 100%;
+    overflow: auto;
+  }
+
+  #delve-idle .idle-wrap {
+    height: auto;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #delve-idle .idle-hero {
+    position: relative;
+    inset: auto;
+    min-height: 72vh;
+    padding: 28px 20px 110px;
+  }
+
+  #delve-idle .idle-title {
+    font-size: clamp(46px, 16vw, 80px);
+  }
+
+  #delve-idle .idle-hero-art {
+    width: 200px;
+    right: -30px;
+    opacity: 0.3;
+  }
+
+  #delve-idle .idle-grid {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 14px;
+  }
+
+  #delve-idle .idle-card {
+    width: auto;
+  }
+
+  #delve-idle .idle-build {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    margin: 0 14px 24px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-left {
+    top: 76px;
+    left: 10px;
+    width: calc(100% - 20px);
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    transform: none;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right #ability-bar {
+    flex-direction: row;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right .skill-extra {
+    flex-direction: row;
+  }
+
+  #delve-active > .side#delve-side {
+    display: none;
+  }
+
+  .modal {
+    width: 100%;
+    border-left-width: 0;
+    border-top-width: 4px;
+  }
+
+  .modal .draft-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 重构主页复核：组合面板不挡角色 */
+#delve-idle .idle-build {
+  top: auto;
+  bottom: 146px;
+  right: 20px;
+  width: 214px;
+  max-height: 300px;
+  padding: 10px;
+}
+
+#delve-idle .idle-build .combo-rule-grid {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+#delve-idle .idle-build .combo-rule {
+  padding: 8px;
+}
+
+#delve-idle .idle-hero-art {
+  right: 18%;
+  width: clamp(260px, 34vw, 440px);
+  opacity: 0.78;
+}
+
+@media (max-width: 900px) {
+  #delve-idle .idle-build {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    max-height: none;
+    margin: 0 14px 24px;
+  }
+
+  #delve-idle .idle-build .combo-rule-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #delve-idle .idle-hero-art {
+    right: -30px;
+    width: 200px;
+  }
+}
+
+/* 重构主页复核 3：底部档案文字完整 */
+#delve-idle .idle-card {
+  overflow: visible;
+  padding: 12px 18px 10px;
+}
+
+#delve-idle .idle-card-label {
+  display: block;
+  padding-left: 2px;
+}
+
 </style>
 </head>
 <body>
@@ -8318,7 +8858,7 @@ button:active:not(:disabled),
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T09:45:55.078Z */
+/* Emberfall · 单文件构建 · 2026-11-22T09:50:23.693Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
