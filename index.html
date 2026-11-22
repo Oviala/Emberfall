@@ -8644,6 +8644,197 @@ header.topbar::after {
   padding-left: 2px;
 }
 
+/* 场景装饰层：像素藤蔓 / 锈斑 / 星点 */
+.ruin-decor {
+  position: fixed;
+  z-index: 55;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.72;
+}
+
+.ruin-decor .ruin-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
+}
+
+.ruin-decor .vine-shadow {
+  opacity: 0.75;
+}
+
+.ruin-decor .ruin-glints {
+  animation: ruin-glint 6s steps(2) infinite;
+}
+
+@keyframes ruin-glint {
+  0%, 88%, 100% { opacity: 0.5; }
+  92% { opacity: 1; }
+}
+
+/* 去框化：面板只保留轻分隔和材质，不再满屏方框 */
+.panel,
+.idle-card,
+.idle-build,
+.side-card,
+.modal,
+.draft-card,
+.relic-choice,
+.shop-item {
+  border-color: rgba(200, 177, 133, 0.13) !important;
+  box-shadow: none !important;
+}
+
+.panel,
+.idle-build,
+.side-card {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 34%),
+    rgba(12, 17, 28, 0.52);
+}
+
+.idle-card {
+  background: rgba(12, 17, 28, 0.42);
+  border-width: 0 0 1px 2px !important;
+  border-color: rgba(200, 177, 133, 0.16) !important;
+  padding-left: 16px;
+}
+
+.idle-build {
+  background:
+    linear-gradient(180deg, rgba(240, 138, 72, 0.05), transparent 40%),
+    rgba(10, 15, 25, 0.5);
+}
+
+.side-card {
+  background: transparent;
+  border-width: 0 0 1px 0 !important;
+  border-color: rgba(200, 177, 133, 0.14) !important;
+  border-radius: 0;
+}
+
+.side-card > summary {
+  background: transparent;
+}
+
+.arena-stage,
+#stage.arena-stage {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.modal {
+  border-width: 0 0 0 2px !important;
+  border-color: rgba(240, 138, 72, 0.38) !important;
+  background:
+    linear-gradient(180deg, rgba(240, 138, 72, 0.06), transparent 26%),
+    rgba(10, 15, 25, 0.92);
+  box-shadow: none !important;
+}
+
+.modal::before {
+  display: none;
+}
+
+.draft-card,
+.relic-choice,
+.shop-item {
+  border-width: 0 0 1px 0 !important;
+  border-radius: 0;
+  background: rgba(18, 24, 39, 0.72);
+}
+
+.draft-card:hover,
+.relic-choice:hover,
+.shop-item:hover {
+  transform: none;
+  border-color: rgba(240, 138, 72, 0.42) !important;
+  box-shadow: none !important;
+}
+
+.hud .hud-top,
+.hud .hud-left .player-bars,
+.hud .hud-right #ability-bar,
+.hud .hud-right .skill-extra,
+.hud #stage-hint,
+.hud .boss-bar {
+  border-width: 0 !important;
+  border-left: 2px solid rgba(240, 138, 72, 0.3) !important;
+  box-shadow: none !important;
+  background: rgba(8, 13, 22, 0.55);
+}
+
+.skill-btn,
+.skill-slot-empty {
+  border-width: 1px;
+  box-shadow: none;
+}
+
+/* 去掉角落像素块 */
+.panel::before,
+.idle-card::before,
+.side-card::before,
+.draft-card::before {
+  display: none;
+}
+
+/* 顶栏不再是一整块硬边框 */
+header.topbar {
+  border-right: 1px solid rgba(240, 138, 72, 0.2);
+  box-shadow: none;
+  background:
+    linear-gradient(180deg, rgba(20, 26, 40, 0.82), rgba(8, 12, 20, 0.86));
+}
+
+/* 像素藤蔓在手机端收敛 */
+@media (max-width: 900px) {
+  .ruin-decor {
+    opacity: 0.35;
+  }
+}
+
+/* 最后一轮去框 + 装饰层不挡文字 */
+.ruin-decor {
+  z-index: 2;
+}
+
+#delve-idle .idle-build {
+  border: 0 !important;
+  background: linear-gradient(90deg, rgba(8, 13, 22, 0), rgba(8, 13, 22, 0.42)) !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+#delve-idle .idle-build .combo-rule {
+  border: 0 !important;
+  border-left: 1px solid rgba(200, 177, 133, 0.18) !important;
+  background: transparent !important;
+  padding-left: 10px;
+}
+
+#delve-idle .idle-build .idle-build-head {
+  border-bottom: 1px solid rgba(200, 177, 133, 0.14);
+  padding-bottom: 6px;
+}
+
+/* 组合浮层提高可读性，藤蔓仍作为背景层 */
+#delve-idle .idle-build {
+  background: linear-gradient(90deg, rgba(8, 13, 22, 0.18), rgba(8, 13, 22, 0.78)) !important;
+}
+
+#delve-idle .idle-build .idle-build-head h2,
+#delve-idle .idle-build .combo-rule {
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+#delve-idle .idle-build .idle-build-head h2 {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
 </style>
 </head>
 <body>
@@ -8688,6 +8879,72 @@ header.topbar::after {
     </header>
 
     <main class="main">
+      <div class="ruin-decor" aria-hidden="true">
+        <svg class="ruin-svg" viewBox="0 0 1600 1000" preserveAspectRatio="none" shape-rendering="crispEdges">
+          <defs>
+            <linearGradient id="vineDeep" x1="0" y1="0" x2="1" y2="1">
+              <stop stop-color="#1d2c24"/><stop offset="1" stop-color="#0c1411"/>
+            </linearGradient>
+            <linearGradient id="vineMid" x1="0" y1="0" x2="0" y2="1">
+              <stop stop-color="#4f7048"/><stop offset="1" stop-color="#294631"/>
+            </linearGradient>
+            <linearGradient id="rustMid" x1="0" y1="0" x2="1" y2="1">
+              <stop stop-color="#8f4d31"/><stop offset=".6" stop-color="#6b3426"/><stop offset="1" stop-color="#3a2119"/>
+            </linearGradient>
+          </defs>
+
+          <g class="ruin-rust" opacity=".7">
+            <path d="M0 760h86v22H48v34h38v18H0Z" fill="url(#rustMid)"/>
+            <path d="M0 842h132v16H92v30h40v20H0Z" fill="#4d2a1f"/>
+            <path d="M1196 0h148v18h-42v26h42v22h-90V48h-58Z" fill="url(#rustMid)"/>
+            <path d="M1450 214h150v20h-58v30h58v16h-96v-22h-54Z" fill="#573024"/>
+            <path d="M150 930h138v20h-52v28h52v18H150Z" fill="#42241b"/>
+            <path d="M1312 912h288v26h-92v36h92v26h-160v-24h-128Z" fill="#4d2a1f"/>
+            <path d="M0 560h28v42H0Z" fill="#7a3d2b"/>
+            <path d="M1574 660h26v54h-26Z" fill="#7a3d2b"/>
+          </g>
+
+          <g class="vine-shadow" opacity=".8" transform="translate(5 7)">
+            <path d="M70 0h34v76h18v74H86v92h38v76H70v94h32v108H62v-136h-24v-92h24V216h26v-64H62V76h8Z" fill="#070b09"/>
+            <path d="M1450 1000h34V846h26v-82h-28V624h42v-96h-34V402h30V294h-54v122h-26v58h26v92h-20v82h-26v96h30Z" fill="#070b09"/>
+          </g>
+
+          <g class="vine-dark" transform="translate(0 0)">
+            <path d="M70 0h27v78h16v68H82v88h36v72H72v88h28v102H58V360H36V274h22V182h22V96H56V58h14Z" fill="url(#vineDeep)"/>
+            <path d="M1450 1000h27V854h26v-82h-28V628h38v-92h-32V408h28V302h-48v118h-26v54h26v88h-18v78h-28v92h30Z" fill="url(#vineDeep)"/>
+          </g>
+
+          <g class="vine-mid">
+            <path d="M88 0h13v74h16v64H96v80h28v64H92v76h20v88H78V354H58v-74h20V196h18V90H76V56h12Z" fill="url(#vineMid)"/>
+            <path d="M1464 1000h13V850h22v-76h-24V638h30v-78h-24V414h20V322h-34v104h-20v48h20v80h-14v72h-22v84h24Z" fill="url(#vineMid)"/>
+          </g>
+
+          <g class="vine-leaf" opacity=".9">
+            <path d="M114 140h36v14h-22v22h-14Z" fill="#6d8b58"/>
+            <path d="M124 286h28v12h-14v18h-14Z" fill="#55754a"/>
+            <path d="M104 430h40v14h-26v20h-14Z" fill="#4d6a43"/>
+            <path d="M140 574h30v12h-16v16h-14Z" fill="#6d8b58"/>
+            <path d="M96 700h34v12h-20v18h-14Z" fill="#4d6a43"/>
+            <path d="M1456 160h-36v14h22v22h14Z" fill="#6d8b58"/>
+            <path d="M1448 326h-28v12h14v18h14Z" fill="#55754a"/>
+            <path d="M1472 470h-40v14h26v20h14Z" fill="#4d6a43"/>
+            <path d="M1436 624h-30v12h16v16h14Z" fill="#6d8b58"/>
+            <path d="M1480 758h-34v12h20v18h14Z" fill="#4d6a43"/>
+            <path d="M1240 900h44v14h-26v20h-18Z" fill="#55754a"/>
+            <path d="M1128 928h30v12h-18v16h-12Z" fill="#4d6a43"/>
+          </g>
+
+          <g class="ruin-glints">
+            <rect x="118" y="208" width="8" height="8" fill="#f5c85b"/>
+            <rect x="146" y="362" width="6" height="6" fill="#64d3d4"/>
+            <rect x="112" y="506" width="7" height="7" fill="#f08a48"/>
+            <rect x="1420" y="564" width="8" height="8" fill="#f5c85b"/>
+            <rect x="1442" y="716" width="6" height="6" fill="#64d3d4"/>
+            <rect x="1320" y="40" width="8" height="8" fill="#f08a48"/>
+            <rect x="60" y="884" width="7" height="7" fill="#64d3d4"/>
+          </g>
+        </svg>
+      </div>
       <section class="view is-active" id="view-delve">
         <div class="delve">
           <div class="delve-active" id="delve-active" hidden>
@@ -8858,7 +9115,7 @@ header.topbar::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T09:50:23.693Z */
+/* Emberfall · 单文件构建 · 2026-11-22T10:07:55.646Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
