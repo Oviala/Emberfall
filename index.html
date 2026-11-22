@@ -7381,6 +7381,424 @@ body::after {
   display: none;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Codex scene layout，按真实 DOM 适配
+   ═══════════════════════════════════════════════════════════ */
+
+/* 主页：左侧场景标题，右侧档案栏 */
+#delve-idle {
+  min-height: calc(100vh - 150px);
+  display: grid;
+  place-items: center;
+  padding: clamp(14px, 3vw, 34px);
+}
+
+#delve-idle .idle-wrap {
+  width: min(1180px, 100%);
+  max-width: 1180px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: clamp(14px, 2.6vw, 30px);
+  align-items: stretch;
+}
+
+#delve-idle .idle-hero {
+  grid-column: 1;
+  min-height: clamp(460px, 65vh, 620px);
+  justify-content: flex-end;
+  align-items: flex-start;
+  text-align: left;
+  padding: clamp(28px, 4.5vw, 58px);
+  border-radius: 26px 4px 26px 4px;
+  background:
+    linear-gradient(180deg, transparent 18%, rgba(7, 10, 18, 0.88) 84%),
+    radial-gradient(circle at 76% 22%, rgba(238, 151, 78, 0.24), transparent 22%),
+    radial-gradient(circle at 55% 55%, rgba(97, 126, 162, 0.16), transparent 34%),
+    linear-gradient(135deg, #202a3a, #101521 60%, #090d15);
+}
+
+#delve-idle .idle-hero::before {
+  border-radius: 20px 2px 20px 2px;
+}
+
+#delve-idle .idle-mark {
+  margin: 0 0 10px;
+  width: 70px;
+  height: 70px;
+}
+
+#delve-idle .idle-overline,
+#delve-idle .idle-tagline,
+#delve-idle .idle-lead {
+  text-align: left;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+#delve-idle .idle-title {
+  font-size: clamp(52px, 7vw, 92px);
+  letter-spacing: 0.08em;
+}
+
+#delve-idle .idle-lead {
+  max-width: 560px;
+}
+
+#delve-idle .idle-layer-row {
+  margin-top: 10px;
+}
+
+#delve-idle .idle-quick {
+  justify-content: flex-start;
+}
+
+#delve-idle .idle-hero-art {
+  right: clamp(0px, 2.8vw, 34px);
+  width: clamp(220px, 28vw, 340px);
+  opacity: 0.92;
+}
+
+#delve-idle .idle-grid {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: stretch;
+  gap: 10px;
+}
+
+#delve-idle .idle-card {
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#delve-idle .idle-build {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+}
+
+/* 战斗：全屏舞台 + 右侧观察台 + 底部中央技能栏 */
+#delve-active {
+  position: relative;
+  display: block;
+  height: 100%;
+  min-height: calc(100vh - 72px);
+}
+
+#delve-active > #stage.arena-stage {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 72px);
+  min-height: 520px;
+  padding: 0;
+  border-radius: 2px;
+}
+
+#delve-active > #stage.arena-stage > #arena-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+#delve-active > #stage.arena-stage > .hud {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  padding: 0;
+  pointer-events: none;
+}
+
+#delve-active > #stage.arena-stage > .hud::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgba(239, 188, 116, 0.12);
+  pointer-events: none;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-top {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  right: 342px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 6px 12px;
+  pointer-events: auto;
+}
+
+#delve-active > #stage.arena-stage > .hud .boss-bar {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 56vw);
+  margin: 0;
+  pointer-events: auto;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-bottom {
+  display: contents;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-left {
+  position: absolute;
+  z-index: 4;
+  top: 88px;
+  left: 20px;
+  width: min(285px, calc(100% - 380px));
+  display: grid;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-left .player-bars {
+  padding: 8px 9px;
+  border: 1px solid rgba(239, 188, 116, 0.24);
+  background: rgba(7, 11, 18, 0.74);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-status {
+  pointer-events: auto;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-right {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: min(560px, calc(100% - 380px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-right #ability-bar {
+  padding: 7px 10px;
+  border: 1px solid rgba(239, 188, 116, 0.24);
+  background: rgba(7, 11, 18, 0.78);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+#delve-active > #stage.arena-stage > .hud .hud-right .skill-extra {
+  display: flex;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid rgba(239, 188, 116, 0.18);
+  background: rgba(7, 11, 18, 0.78);
+}
+
+#delve-active > #stage.arena-stage > .hud #stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#delve-active > .side#delve-side {
+  position: absolute;
+  z-index: 7;
+  top: 18px;
+  right: 14px;
+  bottom: 18px;
+  width: min(326px, 28vw);
+  overflow: auto;
+  padding: 8px;
+  border-left: 1px solid rgba(239, 188, 116, 0.16);
+  background: linear-gradient(90deg, transparent, rgba(7, 11, 19, 0.88) 14%);
+}
+
+#delve-active > .side#delve-side > details.panel.side-card {
+  margin: 8px 0;
+  border-radius: 8px;
+  background: rgba(9, 14, 24, 0.82);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.26);
+}
+
+@media (max-width: 980px) {
+  #delve-idle .idle-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  #delve-idle .idle-grid,
+  #delve-idle .idle-build {
+    grid-column: 1;
+  }
+
+  #delve-idle .idle-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-top {
+    right: 20px;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-left {
+    width: min(260px, calc(100% - 40px));
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    max-width: calc(100% - 40px);
+  }
+
+  #delve-active > .side#delve-side {
+    top: auto;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    width: auto;
+    max-height: 27vh;
+    border-top: 1px solid rgba(239, 188, 116, 0.16);
+    border-left: 0;
+    background: linear-gradient(180deg, rgba(7, 11, 19, 0.92), rgba(7, 11, 19, 0.78));
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    bottom: calc(27vh + 48px);
+  }
+
+  #delve-active > #stage.arena-stage > .hud #stage-hint {
+    bottom: calc(27vh + 24px);
+  }
+}
+
+@media (max-width: 620px) {
+  #delve-idle .idle-hero {
+    min-height: 0;
+    padding: 24px 18px;
+  }
+
+  #delve-idle .idle-hero-art {
+    opacity: 0.3;
+    width: 190px;
+    right: -30px;
+  }
+
+  #delve-idle .idle-title {
+    font-size: 48px;
+  }
+
+  #delve-idle .idle-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #delve-active > #stage.arena-stage {
+    height: calc(100vh - 58px);
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-left {
+    top: 72px;
+    left: 12px;
+    width: calc(100% - 24px);
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-right {
+    left: 12px;
+    right: 12px;
+    bottom: calc(28vh + 42px);
+    transform: none;
+    max-width: none;
+    width: auto;
+  }
+
+  #delve-active > #stage.arena-stage > .hud .hud-top {
+    top: 10px;
+    left: 12px;
+    right: 12px;
+    padding: 4px 8px;
+  }
+
+  #delve-active > .side#delve-side {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    max-height: 26vh;
+  }
+}
+
+/* 组合/图鉴：档案卷轴容器 */
+#combo-body,
+#codex-body {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 52px);
+  border: 1px solid rgba(239, 188, 116, 0.16);
+  border-radius: 22px 4px 22px 4px;
+  background:
+    linear-gradient(135deg, rgba(239, 188, 116, 0.06), transparent 26%),
+    rgba(8, 13, 23, 0.68);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.26);
+}
+
+/* 弹窗：仪式文书感 */
+#modal-root > .modal-backdrop > .modal {
+  border-radius: 20px 4px 20px 4px;
+  border-color: rgba(239, 188, 116, 0.28);
+  background:
+    linear-gradient(135deg, rgba(239, 188, 116, 0.08), transparent 28%),
+    linear-gradient(180deg, #172132, #0b111c);
+}
+
+/* 场景主页复核：标题不被立绘遮挡 */
+#delve-idle .idle-hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+#delve-idle .idle-hero-art {
+  z-index: 1;
+  right: 0;
+  width: clamp(170px, 21vw, 240px);
+  opacity: 0.62;
+}
+
+#delve-idle .idle-title {
+  position: relative;
+  z-index: 3;
+  max-width: 100%;
+  font-size: clamp(42px, 5.4vw, 70px);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  #delve-idle .idle-hero-art {
+    width: 170px;
+    right: -24px;
+    opacity: 0.28;
+  }
+
+  #delve-idle .idle-title {
+    font-size: clamp(38px, 12vw, 56px);
+  }
+}
+
+/* 场景主页复核 2：内容层只抬高文字，立绘保持绝对定位 */
+#delve-idle .idle-hero > *:not(.idle-hero-art) {
+  position: relative;
+  z-index: 2;
+}
+
+#delve-idle .idle-hero > .idle-hero-art {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-46%);
+}
+
 </style>
 </head>
 <body>
@@ -7595,7 +8013,7 @@ body::after {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T09:13:29.414Z */
+/* Emberfall · 单文件构建 · 2026-11-22T09:30:47.797Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
