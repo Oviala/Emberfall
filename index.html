@@ -6751,6 +6751,636 @@ textarea {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Codex UI pass — ruined industrial wasteland
+   Generated independently from style-only brief.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --ef-void: #111312;
+  --ef-iron: #1b1d1b;
+  --ef-iron-light: #272a26;
+  --ef-ash: #77786e;
+  --ef-dust: #aaa38b;
+  --ef-bone: #d8cfb5;
+  --ef-rust: #884735;
+  --ef-rust-dark: #4f2b24;
+  --ef-ember: #d56a36;
+  --ef-ember-hot: #ef9a4c;
+  --ef-shadow: rgba(0, 0, 0, .72);
+  --ef-line: rgba(211, 194, 153, .24);
+  --ef-line-strong: rgba(211, 194, 153, .46);
+  --ef-panel: rgba(27, 29, 27, .96);
+  --ef-panel-deep: rgba(12, 14, 13, .96);
+  --ef-display: "Trebuchet MS", "Segoe UI", sans-serif;
+  --ef-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ef-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--ef-void);
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  color: var(--ef-bone);
+  background:
+    linear-gradient(rgba(12, 14, 13, .68), rgba(12, 14, 13, .68)),
+    repeating-linear-gradient(105deg, transparent 0 13px, rgba(217, 196, 143, .025) 13px 14px),
+    repeating-linear-gradient(12deg, rgba(0, 0, 0, .12) 0 2px, transparent 2px 8px),
+    #151715;
+  font-family: var(--ef-body);
+  letter-spacing: .015em;
+}
+
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: .42;
+  background:
+    radial-gradient(circle at 52% 86%, rgba(213, 106, 54, .15), transparent 25rem),
+    repeating-linear-gradient(172deg, transparent 0 19px, rgba(230, 215, 175, .025) 19px 20px),
+    repeating-linear-gradient(86deg, transparent 0 31px, rgba(0, 0, 0, .13) 31px 33px);
+}
+
+body::after {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  box-shadow:
+    inset 0 0 0 1px rgba(231, 214, 167, .12),
+    inset 0 0 8rem rgba(0, 0, 0, .55);
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+button,
+[role="button"],
+.tab,
+.card,
+.item,
+.shop-item,
+.codex-entry {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role="button"],
+.tab {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--ef-ember-hot);
+  outline-offset: 3px;
+}
+
+h1,
+h2,
+h3,
+h4,
+.title,
+.logo,
+.screen-title,
+.panel-title {
+  margin-top: 0;
+  color: var(--ef-bone);
+  font-family: var(--ef-display);
+  font-weight: 800;
+  letter-spacing: .09em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #080908, 0 0 1rem rgba(213, 106, 54, .16);
+}
+
+h1,
+.logo {
+  position: relative;
+  color: var(--ef-ember-hot);
+  letter-spacing: .16em;
+}
+
+h1::after,
+.logo::after,
+.screen-title::after {
+  display: block;
+  width: 4.5rem;
+  height: 2px;
+  margin-top: .7rem;
+  content: "";
+  background: linear-gradient(90deg, var(--ef-ember), transparent);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .8);
+}
+
+p,
+label,
+small,
+.description,
+.subtitle,
+.flavor-text {
+  color: var(--ef-dust);
+}
+
+small,
+.meta,
+.stat-label,
+.cost,
+.tag,
+.badge,
+.kicker {
+  font-family: var(--ef-mono);
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+#app,
+#game,
+.game,
+.app,
+.screen,
+.view,
+.page {
+  position: relative;
+  isolation: isolate;
+}
+
+#app,
+#game {
+  min-height: 100vh;
+}
+
+header,
+.top-bar,
+.navbar,
+.hud,
+#hud,
+footer,
+.bottom-bar {
+  border-color: var(--ef-line);
+  background:
+    linear-gradient(180deg, rgba(48, 48, 42, .92), rgba(20, 22, 20, .96)),
+    repeating-linear-gradient(90deg, transparent 0 20px, rgba(255, 255, 255, .025) 20px 21px);
+  box-shadow:
+    0 8px 24px var(--ef-shadow),
+    inset 0 -1px 0 rgba(0, 0, 0, .85),
+    inset 0 1px 0 rgba(217, 196, 143, .12);
+}
+
+.hud,
+#hud {
+  position: relative;
+  color: var(--ef-bone);
+}
+
+.hud::before,
+#hud::before,
+header::before,
+.top-bar::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: .3;
+  background: repeating-linear-gradient(165deg, transparent 0 9px, rgba(188, 167, 116, .08) 9px 10px);
+}
+
+.panel,
+.card,
+.modal-content,
+.dialog,
+.window,
+.menu,
+.inventory,
+.codex,
+.shop,
+.settings,
+.combination,
+.combo,
+section {
+  position: relative;
+  border: 1px solid var(--ef-line);
+  background:
+    linear-gradient(135deg, rgba(56, 55, 46, .22), transparent 36%),
+    repeating-linear-gradient(104deg, transparent 0 18px, rgba(210, 194, 151, .028) 18px 19px),
+    var(--ef-panel);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, .42),
+    inset 0 0 0 1px rgba(0, 0, 0, .45),
+    inset 0 1px 0 rgba(240, 220, 169, .1);
+}
+
+.panel::before,
+.card::before,
+.modal-content::before,
+.dialog::before,
+.window::before {
+  position: absolute;
+  inset: 7px;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid rgba(207, 190, 147, .09);
+  content: "";
+}
+
+.panel-title,
+.modal-title,
+.dialog-title,
+.window-title {
+  padding-bottom: .7rem;
+  border-bottom: 1px solid var(--ef-line);
+}
+
+.card:hover,
+.shop-item:hover,
+.codex-entry:hover,
+.item:hover {
+  border-color: var(--ef-line-strong);
+  background-color: #30312b;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, .48),
+    inset 3px 0 0 var(--ef-rust);
+}
+
+button,
+.btn,
+.button,
+.action,
+.tab,
+input[type="button"],
+input[type="submit"] {
+  position: relative;
+  min-height: 2.65rem;
+  padding: .68rem 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(211, 194, 153, .4);
+  color: var(--ef-bone);
+  background:
+    linear-gradient(180deg, rgba(91, 78, 58, .62), rgba(35, 34, 29, .94)),
+    repeating-linear-gradient(100deg, transparent 0 11px, rgba(255, 255, 255, .035) 11px 12px);
+  box-shadow:
+    0 4px 0 #090a09,
+    inset 0 1px 0 rgba(255, 236, 183, .16);
+  font-family: var(--ef-display);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition: border-color .16s ease, color .16s ease, transform .16s ease, background .16s ease;
+}
+
+button::after,
+.btn::after,
+.button::after,
+.action::after,
+.tab::after {
+  position: absolute;
+  top: 0;
+  right: -25%;
+  width: 45%;
+  height: 100%;
+  pointer-events: none;
+  content: "";
+  opacity: .18;
+  transform: skewX(-24deg);
+  background: var(--ef-bone);
+}
+
+button:hover,
+.btn:hover,
+.button:hover,
+.action:hover,
+.tab:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover {
+  border-color: var(--ef-ember-hot);
+  color: #fff0c5;
+  background-color: var(--ef-rust-dark);
+  transform: translateY(-1px);
+}
+
+button:active,
+.btn:active,
+.button:active,
+.action:active,
+.tab:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #090a09;
+}
+
+button.primary,
+.btn-primary,
+.primary,
+.confirm,
+.buy,
+.equip,
+.start,
+[data-action="start"],
+[data-action="confirm"] {
+  border-color: var(--ef-ember);
+  color: #ffe0ad;
+  background:
+    linear-gradient(180deg, rgba(155, 67, 39, .86), rgba(79, 35, 28, .96)),
+    repeating-linear-gradient(100deg, transparent 0 13px, rgba(255, 217, 141, .08) 13px 14px);
+  text-shadow: 1px 1px 0 #482018;
+}
+
+button.danger,
+.delete,
+.sell,
+.close {
+  border-color: rgba(151, 73, 53, .72);
+  color: #e19a7b;
+}
+
+button:disabled,
+.btn:disabled,
+.button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .42;
+  filter: grayscale(.7);
+  transform: none;
+}
+
+.tab.active,
+.tab[aria-selected="true"],
+.nav-item.active,
+.is-active {
+  color: var(--ef-ember-hot);
+  border-color: var(--ef-ember);
+  background: rgba(103, 46, 33, .58);
+  box-shadow: inset 0 -2px 0 var(--ef-ember), 0 0 1rem rgba(213, 106, 54, .14);
+}
+
+input,
+select,
+textarea {
+  border: 1px solid var(--ef-line);
+  border-radius: 0;
+  color: var(--ef-bone);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 14px, rgba(255, 255, 255, .025) 14px 15px),
+    var(--ef-panel-deep);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .45);
+}
+
+input,
+select {
+  min-height: 2.5rem;
+  padding: .55rem .7rem;
+}
+
+textarea {
+  padding: .7rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #77776c;
+}
+
+progress,
+.meter,
+.bar,
+.progress {
+  overflow: hidden;
+  border: 1px solid var(--ef-line);
+  background: #0b0d0c;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .7);
+}
+
+progress::-webkit-progress-bar {
+  background: #0b0d0c;
+}
+
+progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--ef-rust-dark), var(--ef-ember));
+}
+
+progress::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--ef-rust-dark), var(--ef-ember));
+}
+
+.bar > *,
+.progress > *,
+.meter > * {
+  background: linear-gradient(90deg, var(--ef-rust-dark), var(--ef-ember));
+  box-shadow: 0 0 10px rgba(213, 106, 54, .35);
+}
+
+.modal,
+.modal-backdrop,
+.overlay,
+.dialog-backdrop {
+  background: rgba(5, 6, 6, .78);
+}
+
+.modal,
+.dialog,
+[role="dialog"] {
+  border-color: var(--ef-line-strong);
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, .8),
+    0 0 0 1px rgba(0, 0, 0, .7),
+    inset 0 0 3rem rgba(213, 106, 54, .05);
+}
+
+.modal::before,
+.dialog::before,
+[role="dialog"]::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 3px;
+  content: "";
+  background: var(--ef-ember);
+  box-shadow: 0 0 16px rgba(213, 106, 54, .3);
+}
+
+.icon,
+.item-icon,
+.avatar,
+.portrait,
+.slot {
+  border: 1px solid var(--ef-line);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(213, 106, 54, .14), transparent 55%),
+    #151715;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, .28),
+    inset 0 0 1rem rgba(0, 0, 0, .55);
+}
+
+.tooltip,
+[role="tooltip"] {
+  z-index: 30;
+  border: 1px solid var(--ef-line-strong);
+  color: var(--ef-bone);
+  background: #101210;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .7);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--ef-line);
+}
+
+a {
+  color: var(--ef-ember-hot);
+}
+
+a:hover {
+  color: #ffd59b;
+}
+
+@media (max-width: 720px) {
+  body {
+    font-size: .94rem;
+  }
+
+  h1,
+  .logo {
+    font-size: clamp(1.55rem, 8vw, 2.4rem);
+  }
+
+  .panel,
+  .card,
+  .modal-content,
+  .dialog,
+  .window {
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, .42),
+      inset 0 0 0 1px rgba(0, 0, 0, .45);
+  }
+
+  button,
+  .btn,
+  .button,
+  .action,
+  .tab {
+    min-height: 2.85rem;
+    padding-inline: .78rem;
+  }
+
+  .hud,
+  #hud {
+    font-size: .88rem;
+  }
+
+  .modal,
+  .dialog,
+  [role="dialog"] {
+    max-width: calc(100vw - 1.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+/* Codex UI 复核修正：HUD 必须保持覆盖在竞技场上，不参与文档流 */
+.arena-stage {
+  position: relative;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 12px;
+  pointer-events: none;
+}
+
+.hud-top {
+  flex: 0 0 auto;
+}
+
+.hud-bottom {
+  margin-top: auto;
+}
+
+/* Codex 的全局 section 边框不要套到竞技场内部结构上 */
+.arena-stage section,
+.hud section,
+.modal section {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.arena-stage button,
+.arena-stage .icon-btn,
+.arena-stage .skill-btn {
+  min-height: 0;
+}
+
+/* Codex UI 复核修正：视图层必须绝对铺满主区域 */
+.view {
+  position: absolute;
+  inset: 0;
+}
+
+.view.is-active {
+  position: absolute;
+  inset: 0;
+}
+
+/* Codex UI 复核修正：全局暗角不能盖住战斗画布 */
+body::after {
+  display: none;
+}
+
+/* Codex UI 复核修正：HUD 是全屏覆盖层，本身不能有面板底色 */
+.hud,
+#hud {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.hud::before,
+#hud::before {
+  display: none;
+}
+
 </style>
 </head>
 <body>
@@ -6965,7 +7595,7 @@ textarea {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T08:44:04.049Z */
+/* Emberfall · 单文件构建 · 2026-11-22T09:13:29.414Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
