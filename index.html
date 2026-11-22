@@ -9249,11 +9249,542 @@ header.topbar {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   废墟风背景：残破拱廊 / 石墙 / 塌落碎石 / 锈铁
+   ═══════════════════════════════════════════════════════════ */
+
+body {
+  background:
+    radial-gradient(1100px 700px at 50% 18%, rgba(148, 82, 45, 0.14), transparent 66%),
+    radial-gradient(900px 620px at 8% 88%, rgba(94, 54, 34, 0.12), transparent 70%),
+    linear-gradient(180deg, #17100c 0%, #0b0806 52%, #050403 100%);
+  background-attachment: fixed;
+}
+
+.ruins-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #070504;
+}
+
+.ruins-stage .ruins-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.94;
+}
+
+.ruins-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(72% 66% at 30% 46%, rgba(4, 3, 2, 0.52), transparent 72%),
+    linear-gradient(90deg, rgba(4, 3, 2, 0.55) 0%, rgba(4, 3, 2, 0.18) 38%, rgba(4, 3, 2, 0.08) 62%, rgba(4, 3, 2, 0.48) 100%),
+    linear-gradient(180deg, rgba(4, 3, 2, 0.5) 0%, transparent 24%, transparent 68%, rgba(3, 2, 2, 0.7) 100%);
+}
+
+.ruins-dust {
+  animation: ruinsDust 14s ease-in-out infinite alternate;
+}
+
+.ruins-embers {
+  animation: ruinsEmbers 9s ease-in-out infinite alternate;
+}
+
+@keyframes ruinsDust {
+  from { transform: translate3d(0, 0, 0); opacity: .8; }
+  to { transform: translate3d(-10px, -16px, 0); opacity: .5; }
+}
+
+@keyframes ruinsEmbers {
+  from { transform: translate3d(0, 0, 0); opacity: .7; }
+  to { transform: translate3d(8px, -22px, 0); opacity: 1; }
+}
+
+/* 主页不再是一块浮在背景上的硬卡片，改成场景上的文字层 */
+#delve-idle .idle-hero {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  overflow: visible !important;
+}
+
+#delve-idle .idle-hero::before {
+  content: "";
+  position: absolute;
+  inset: -6% -10% -8% -8%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 70% at 32% 46%, rgba(4, 3, 2, 0.72), rgba(4, 3, 2, 0.24) 58%, transparent 78%),
+    linear-gradient(90deg, rgba(5, 4, 3, 0.54), transparent 56%);
+}
+
+#delve-idle .idle-hero::after {
+  display: none !important;
+}
+
+#delve-idle .idle-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+#delve-idle .idle-hero-art {
+  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.68));
+}
+
+#delve-idle .idle-title {
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.82),
+    0 0 30px rgba(255, 126, 64, 0.16),
+    0 0 80px rgba(0, 0, 0, 0.5);
+}
+
+#delve-idle .idle-card {
+  background:
+    linear-gradient(180deg, rgba(45, 31, 22, 0.52), rgba(9, 7, 5, 0.68)) !important;
+  border-width: 0 0 1px 2px !important;
+  border-color: rgba(168, 92, 57, 0.3) !important;
+}
+
+#delve-idle .idle-build {
+  background:
+    linear-gradient(90deg, rgba(12, 9, 6, 0.18), rgba(8, 6, 4, 0.58)) !important;
+  border-color: rgba(168, 92, 57, 0.22) !important;
+}
+
+/* 左侧竖轨：锈铁与石块 */
+header.topbar {
+  background:
+    radial-gradient(circle at 16px 22px, rgba(204, 148, 98, 0.45) 0 1.4px, transparent 2.2px),
+    radial-gradient(circle at calc(100% - 16px) 22px, rgba(204, 148, 98, 0.3) 0 1.2px, transparent 2px),
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(0, 0, 0, 0.24) 38px 39px),
+    repeating-linear-gradient(90deg, transparent 0 26px, rgba(255, 194, 141, 0.025) 26px 27px),
+    linear-gradient(180deg, #2c1d14 0%, #150e0a 42%, #0a0705 100%) !important;
+  border-right: 4px solid #1b110a !important;
+  box-shadow:
+    4px 0 0 #3b271a,
+    8px 0 0 #050403,
+    inset -1px 0 0 rgba(255, 207, 157, 0.08) !important;
+}
+
+.tab {
+  background:
+    linear-gradient(180deg, rgba(55, 38, 26, 0.75), rgba(13, 9, 6, 0.9)) !important;
+  border: 1px solid rgba(168, 92, 57, 0.22) !important;
+  color: #9c7f65;
+}
+
+.tab.is-active {
+  background:
+    linear-gradient(180deg, #cf7a45 0%, #a24f2b 55%, #76371e 100%) !important;
+  border-color: rgba(255, 186, 136, 0.5) !important;
+  color: #1a0e08 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 221, 183, 0.35);
+}
+
+/* 战斗顶部 HUD：锈蚀铁带，不再是蓝黑玻璃 */
+.arena-stage .hud-top {
+  background:
+    radial-gradient(circle at 10px 10px, rgba(210, 148, 95, 0.32) 0 1.2px, transparent 2px),
+    repeating-linear-gradient(90deg, transparent 0 44px, rgba(0, 0, 0, 0.26) 44px 45px),
+    linear-gradient(180deg, rgba(44, 30, 21, 0.88), rgba(10, 7, 5, 0.9)) !important;
+  border: 1px solid rgba(168, 92, 57, 0.22);
+  border-radius: 1px;
+  padding: 8px 12px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 211, 166, 0.08);
+}
+
+.side-card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(38, 27, 19, 0.62), rgba(8, 6, 4, 0.74)) !important;
+  border-color: rgba(168, 92, 57, 0.22) !important;
+}
+
+.side-card::before {
+  display: block !important;
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.24;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(0, 0, 0, 0.4) 25px 26px),
+    repeating-linear-gradient(90deg, transparent 0 44px, rgba(0, 0, 0, 0.3) 44px 45px);
+}
+
+.side-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 代码库/组合页的底板也换成旧石板 */
+#codex-body,
+#combo-body,
+.panel {
+  background:
+    linear-gradient(180deg, rgba(38, 27, 19, 0.48), rgba(8, 6, 4, 0.58)) !important;
+  border-color: rgba(168, 92, 57, 0.2) !important;
+}
+
+.modal {
+  background:
+    linear-gradient(180deg, rgba(52, 34, 23, 0.42), transparent 26%),
+    rgba(10, 8, 6, 0.95) !important;
+  border-left-color: rgba(190, 105, 59, 0.5) !important;
+}
+
+.modal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.2;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 32px, rgba(0, 0, 0, 0.4) 32px 33px),
+    repeating-linear-gradient(90deg, transparent 0 68px, rgba(0, 0, 0, 0.26) 68px 69px);
+}
+
+.modal > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 像素藤蔓退到背景里，不要压过废墟 */
+.ruin-decor {
+  opacity: 0.45;
+}
+
+@media (max-width: 900px) {
+  .ruins-stage .ruins-svg {
+    object-fit: cover;
+    opacity: 0.86;
+  }
+
+  .ruins-stage::after {
+    background:
+      radial-gradient(75% 62% at 48% 42%, rgba(4, 3, 2, 0.42), transparent 76%),
+      linear-gradient(180deg, rgba(4, 3, 2, 0.46) 0%, transparent 28%, transparent 62%, rgba(3, 2, 2, 0.72) 100%);
+  }
+
+  header.topbar {
+    border-top: 4px solid #1b110a !important;
+    border-right: 0 !important;
+    box-shadow: 0 -4px 0 #3b271a, 0 -8px 0 #050403 !important;
+  }
+
+  #delve-idle .idle-hero {
+    min-height: 46vh;
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+
+  #delve-idle .idle-hero::before {
+    inset: -4% -6% -6% -6%;
+    background:
+      radial-gradient(72% 70% at 46% 46%, rgba(4, 3, 2, 0.62), transparent 78%),
+      linear-gradient(180deg, transparent, rgba(4, 3, 2, 0.35));
+  }
+
+  .ruin-decor {
+    opacity: 0.24;
+  }
+}
+
+body.reduce-motion .ruins-dust,
+body.reduce-motion .ruins-embers {
+  animation: none;
+}
+
+/* 战斗左侧信息栏：旧铁板 + 石缝，而不是蓝黑玻璃 */
+#delve-active > .side,
+#delve-side {
+  background:
+    linear-gradient(180deg, rgba(44, 30, 21, 0.94), rgba(9, 7, 5, 0.96)) !important;
+  border-right: 1px solid rgba(168, 92, 57, 0.26) !important;
+  box-shadow:
+    inset -1px 0 0 rgba(255, 208, 160, 0.05),
+    4px 4px 0 #1a110b !important;
+}
+
+#delve-side .side-head h2 {
+  color: #b79574 !important;
+}
+
+#delve-side .side-card {
+  background:
+    linear-gradient(180deg, rgba(38, 27, 19, 0.36), rgba(8, 6, 4, 0.5)) !important;
+}
+
+#delve-side .side-card > summary,
+#delve-side .side-card > .side-head {
+  background: transparent !important;
+}
+
+#delve-side .run-info b,
+#delve-side .run-info span,
+#delve-side .stat-row b {
+  color: #d8c1a6;
+}
+
+/* 技能格/空槽：旧金属槽位，不再是蓝色虚线 */
+.skill-slot,
+.skill-slot-empty {
+  background:
+    linear-gradient(180deg, rgba(42, 29, 20, 0.52), rgba(8, 6, 4, 0.7)) !important;
+  border-color: rgba(168, 92, 57, 0.34) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 197, 146, 0.03) !important;
+}
+
+.skill-slot-empty {
+  color: #7b5d47 !important;
+}
+
+.skill-slot .slot-key,
+.skill-slot-empty .slot-key {
+  color: #8d6b50 !important;
+}
+
+/* 顶部 HUD 里的控制按钮也保持旧金属色 */
+.hud-actions .icon-btn,
+.hud-actions .switch-compact {
+  background:
+    linear-gradient(180deg, rgba(56, 38, 25, 0.8), rgba(12, 9, 6, 0.9)) !important;
+  border-color: rgba(168, 92, 57, 0.28) !important;
+}
+
+/* 档案卡片也统一成旧石/锈铁底板 */
+.combo-card,
+.codex-item,
+.guide-step,
+.combo-rule,
+.draft-card,
+.relic-choice,
+.shop-item {
+  background:
+    linear-gradient(180deg, rgba(46, 32, 22, 0.5), rgba(9, 7, 5, 0.62)) !important;
+  border-color: rgba(168, 92, 57, 0.22) !important;
+}
+
+.combo-card.owned {
+  background:
+    linear-gradient(180deg, rgba(126, 72, 40, 0.2), rgba(20, 12, 8, 0.68)) !important;
+  border-color: rgba(210, 140, 90, 0.4) !important;
+}
+
+.draft-card:hover,
+.relic-choice:hover,
+.shop-item:not(:disabled):hover,
+.codex-entry:hover,
+.combo-card:hover {
+  background:
+    linear-gradient(180deg, rgba(74, 48, 32, 0.45), rgba(14, 9, 6, 0.7)) !important;
+}
+
+/* 战斗 HUD 的蓝底信息条也改旧铁 */
+.hud .hud-left .player-bars,
+.hud .hud-right #ability-bar,
+.hud .hud-right .skill-extra,
+.hud #stage-hint,
+.hud .boss-bar,
+.hud .hud-status .tag {
+  background:
+    linear-gradient(180deg, rgba(39, 27, 19, 0.82), rgba(8, 6, 4, 0.9)) !important;
+  border-color: rgba(168, 92, 57, 0.28) !important;
+  box-shadow: 3px 3px 0 #140d09 !important;
+}
+
+#delve-active > .side#delve-side {
+  background:
+    linear-gradient(180deg, rgba(44, 30, 21, 0.96), rgba(9, 7, 5, 0.97)) !important;
+  border-color: rgba(168, 92, 57, 0.3) !important;
+  box-shadow: 5px 5px 0 #140d09 !important;
+}
+
+/* 树状图节点：暗石槽位 */
+.run-tree-node {
+  background:
+    radial-gradient(circle at 50% 22%, rgba(168, 92, 57, 0.16), rgba(11, 8, 6, 0.94) 72%) !important;
+  border-color: rgba(168, 92, 57, 0.32) !important;
+}
+
 </style>
 </head>
 <body>
   <div class="ambient" id="ambient" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
+    <div class="ruins-stage" aria-hidden="true">
+      <svg class="ruins-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" shape-rendering="geometricPrecision">
+        <defs>
+          <linearGradient id="rsWall" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#20160f" />
+            <stop offset=".48" stop-color="#140e0a" />
+            <stop offset="1" stop-color="#070504" />
+          </linearGradient>
+          <radialGradient id="rsGlow" cx="50%" cy="34%" r="58%">
+            <stop offset="0" stop-color="#a75a32" stop-opacity=".38" />
+            <stop offset=".55" stop-color="#66351f" stop-opacity=".14" />
+            <stop offset="1" stop-color="#000" stop-opacity="0" />
+          </radialGradient>
+          <linearGradient id="rsStone" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#493325" />
+            <stop offset=".55" stop-color="#2a1d15" />
+            <stop offset="1" stop-color="#140d09" />
+          </linearGradient>
+          <linearGradient id="rsRust" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7d442b" />
+            <stop offset="1" stop-color="#3a1e14" />
+          </linearGradient>
+          <pattern id="rsBlocks" width="190" height="76" patternUnits="userSpaceOnUse">
+            <rect width="190" height="76" fill="#1a120e" />
+            <path d="M0 .5H190M0 76H190M95 0V76" stroke="#0a0705" stroke-width="2.2" />
+            <path d="M0 1.5H190" stroke="#4a3324" stroke-width="1" opacity=".45" />
+            <path d="M97 0V76" stroke="#3b291d" stroke-width="1" opacity=".28" />
+            <rect x="6" y="6" width="78" height="28" fill="#241812" opacity=".52" />
+            <rect x="105" y="40" width="76" height="28" fill="#211610" opacity=".45" />
+          </pattern>
+          <filter id="rsSoft" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="16" />
+          </filter>
+        </defs>
+
+        <rect width="1600" height="900" fill="url(#rsWall)" />
+        <rect width="1600" height="900" fill="url(#rsGlow)" />
+        <rect width="1600" height="900" fill="url(#rsBlocks)" opacity=".42" />
+
+        <!-- 破裂的拱廊：四个黑洞洞的拱门 -->
+        <g>
+          <path d="M-60 900V380Q140 205 340 380V900Z" fill="#070504" />
+          <path d="M-60 900V380Q140 205 340 380V900" fill="none" stroke="url(#rsStone)" stroke-width="24" />
+          <path d="M-48 900V388Q140 225 328 388V900" fill="none" stroke="#6b4a33" stroke-width="2.4" opacity=".45" />
+          <path d="M-60 504H-24M-60 590H-20M-60 676H-26M-60 762H-20" stroke="#0b0705" stroke-width="6" opacity=".55" />
+
+          <path d="M380 900V380Q580 205 780 380V900Z" fill="#070504" />
+          <path d="M380 900V380Q580 205 780 380V900" fill="none" stroke="url(#rsStone)" stroke-width="24" />
+          <path d="M392 900V388Q580 225 768 388V900" fill="none" stroke="#6b4a33" stroke-width="2.4" opacity=".45" />
+          <path d="M380 540H416M380 626H410M380 712H418M380 798H408" stroke="#0b0705" stroke-width="6" opacity=".55" />
+
+          <path d="M820 900V380Q1020 205 1220 380V900Z" fill="#070504" />
+          <path d="M820 900V380Q1020 205 1220 380V900" fill="none" stroke="url(#rsStone)" stroke-width="24" />
+          <path d="M832 900V388Q1020 225 1208 388V900" fill="none" stroke="#6b4a33" stroke-width="2.4" opacity=".45" />
+          <path d="M820 504H856M820 590H850M820 676H858M820 762H848" stroke="#0b0705" stroke-width="6" opacity=".55" />
+
+          <path d="M1260 900V380Q1460 205 1660 380V900Z" fill="#070504" />
+          <path d="M1260 900V380Q1460 205 1660 380V900" fill="none" stroke="url(#rsStone)" stroke-width="24" />
+          <path d="M1272 900V388Q1460 225 1648 388V900" fill="none" stroke="#6b4a33" stroke-width="2.4" opacity=".45" />
+          <path d="M1260 540H1296M1260 626H1290M1260 712H1298M1260 798H1288" stroke="#0b0705" stroke-width="6" opacity=".55" />
+        </g>
+
+        <!-- 坍塌的拱顶和断裂的立柱 -->
+        <g>
+          <path d="M340 380L306 300L338 274L368 304L394 264L430 318L452 286L482 350L520 306L548 368L588 330L618 380L580 205Q380 205 340 380Z" fill="#241812" stroke="#0a0705" stroke-width="3" />
+          <path d="M340 380L300 296L336 268L370 300L398 260L436 316L458 282L490 348L526 304L556 366L596 326L626 380" fill="none" stroke="#5a3d2a" stroke-width="3" opacity=".4" />
+
+          <path d="M780 380L742 292L778 264L812 300L842 250L880 312L906 276L940 342L980 300L1012 366L1050 326L1080 380L1020 205Q820 205 780 380Z" fill="#1d1510" stroke="#0a0705" stroke-width="3" />
+          <path d="M1220 380L1188 320L1226 298L1258 330L1288 288L1324 342L1350 312L1382 366L1420 338L1452 380L1460 205Q1220 205 1180 380Z" fill="#211712" stroke="#0a0705" stroke-width="3" />
+
+          <path d="M100 258H150V300H100Z" fill="#2c1e15" stroke="#090605" stroke-width="2" />
+          <path d="M850 244H900V286H850Z" fill="#2a1d14" stroke="#090605" stroke-width="2" />
+          <path d="M1480 270H1530V312H1480Z" fill="#2b1e15" stroke="#090605" stroke-width="2" />
+
+          <path d="M146 300H182V900H146Z" fill="url(#rsStone)" opacity=".82" />
+          <path d="M146 436H182M146 572H182M146 708H182M146 844H182" stroke="#0b0705" stroke-width="4" opacity=".7" />
+          <path d="M162 300L154 380L168 468L158 556L172 650L160 748L170 900" stroke="#050403" stroke-width="2.4" fill="none" opacity=".7" />
+
+          <path d="M428 300H462V900H428Z" fill="url(#rsStone)" opacity=".7" />
+          <path d="M428 400H462M428 520H462M428 640H462M428 760H462" stroke="#0b0705" stroke-width="4" opacity=".6" />
+
+          <path d="M1110 310L1118 250L1148 238L1162 286L1152 900H1118Z" fill="#2a1d15" opacity=".82" />
+          <path d="M1122 360L1134 430L1122 510L1140 596L1124 690L1136 790" stroke="#060403" stroke-width="2.2" fill="none" opacity=".8" />
+
+          <path d="M1390 470H1452V900H1390Z" fill="url(#rsStone)" opacity=".9" />
+          <path d="M1390 470L1378 500L1394 522L1390 582L1404 612L1394 690L1410 726L1398 800L1408 900" fill="none" stroke="#080605" stroke-width="3" opacity=".75" />
+          <path d="M1452 470L1468 506L1450 540L1462 602L1448 676L1462 760L1450 900" fill="none" stroke="#080605" stroke-width="2.4" opacity=".6" />
+        </g>
+
+        <!-- 断裂的横梁、锈蚀铁件 -->
+        <g>
+          <path d="M0 128L290 108L302 148L18 174Z" fill="#17100c" stroke="#050403" stroke-width="3" />
+          <path d="M0 146L286 126" stroke="#4b3424" stroke-width="2" opacity=".5" />
+          <path d="M600 92L910 74L918 112L608 132Z" fill="#140e0a" />
+          <path d="M1170 118L1600 88L1600 132L1182 158Z" fill="#15100b" />
+          <path d="M1176 122L1600 92" stroke="#503622" stroke-width="2.4" opacity=".45" />
+          <path d="M300 108L312 300" stroke="#0a0705" stroke-width="4" opacity=".65" />
+          <path d="M910 74L902 260" stroke="#0a0705" stroke-width="4" opacity=".6" />
+          <path d="M1180 120L1162 352" stroke="#0a0705" stroke-width="5" opacity=".65" />
+          <path d="M282 170L296 900" stroke="#0d0907" stroke-width="3" opacity=".55" />
+          <path d="M1560 100L1530 900" stroke="#0d0907" stroke-width="3" opacity=".45" />
+          <circle cx="212" cy="130" r="4" fill="#6f4a31" opacity=".6" />
+          <circle cx="452" cy="112" r="3.5" fill="#6f4a31" opacity=".55" />
+          <circle cx="782" cy="90" r="4" fill="#6f4a31" opacity=".55" />
+          <circle cx="1300" cy="108" r="4" fill="#6f4a31" opacity=".5" />
+          <path d="M1160 352L1196 360L1170 414L1140 404Z" fill="#2d1d13" opacity=".9" />
+          <path d="M1152 414L1178 606L1148 900" stroke="#0a0705" stroke-width="5" opacity=".6" />
+          <path d="M1178 422L1210 640L1184 900" stroke="#0a0705" stroke-width="3" opacity=".45" />
+        </g>
+
+        <!-- 地面碎石与断裂地砖 -->
+        <g>
+          <path d="M0 806L64 794L122 812L190 802L262 824L338 812L402 836L480 818L548 842L620 828L700 850L772 834L846 856L930 838L1008 860L1090 844L1160 866L1240 850L1320 872L1400 856L1480 878L1560 862L1600 872V900H0Z" fill="#0b0806" />
+          <path d="M0 832L86 824L160 840L244 830L326 852L410 842L492 864L576 852L660 874L748 860L840 882L934 866L1024 888L1118 872L1210 892L1300 878L1390 900H0Z" fill="#060403" />
+          <path d="M104 812L150 840L118 868L74 846Z" fill="#211610" opacity=".85" />
+          <path d="M520 816L574 844L538 878L492 850Z" fill="#1c130e" opacity=".8" />
+          <path d="M1010 828L1064 856L1022 888L970 860Z" fill="#1b120d" opacity=".8" />
+          <path d="M1320 840L1380 862L1350 894L1298 872Z" fill="#1e1510" opacity=".8" />
+          <path d="M0 900V860L60 872L120 856L190 880L260 866L330 890L400 878L470 900Z" fill="#040302" />
+          <path d="M1180 900V866L1240 880L1300 866L1370 890L1440 874L1510 900Z" fill="#040302" />
+        </g>
+
+        <!-- 墙缝、裂纹、锈迹 -->
+        <g fill="none" stroke="#050403" stroke-linecap="round">
+          <path d="M228 180L246 250L236 318L264 386L252 456L282 520" stroke-width="3" opacity=".6" />
+          <path d="M704 236L690 304L710 380L696 450L724 540" stroke-width="2.6" opacity=".55" />
+          <path d="M1084 200L1070 268L1090 330L1072 398L1096 470" stroke-width="3" opacity=".6" />
+          <path d="M1524 360L1508 430L1524 500L1506 570L1520 640" stroke-width="2.8" opacity=".55" />
+          <path d="M300 560L340 548L372 566L410 552" stroke-width="2" opacity=".5" />
+          <path d="M1228 528L1264 516L1300 534L1338 522" stroke-width="2" opacity=".5" />
+        </g>
+        <g opacity=".5">
+          <path d="M1218 230L1278 214L1330 246L1310 310L1248 322L1204 286Z" fill="url(#rsRust)" opacity=".36" />
+          <path d="M88 470L140 458L170 486L148 534L98 542L70 508Z" fill="url(#rsRust)" opacity=".3" />
+          <path d="M1344 628L1388 616L1414 640L1398 682L1352 690L1330 660Z" fill="url(#rsRust)" opacity=".26" />
+        </g>
+
+        <!-- 灰尘与飘动的余烬 -->
+        <g class="ruins-dust" fill="#d8b085">
+          <circle cx="180" cy="356" r="1.6" opacity=".3" />
+          <circle cx="280" cy="424" r="1.2" opacity=".22" />
+          <circle cx="640" cy="360" r="1.8" opacity=".26" />
+          <circle cx="720" cy="470" r="1.1" opacity=".2" />
+          <circle cx="900" cy="330" r="1.4" opacity=".24" />
+          <circle cx="1040" cy="456" r="1.7" opacity=".22" />
+          <circle cx="1180" cy="350" r="1.2" opacity=".2" />
+          <circle cx="1360" cy="430" r="1.5" opacity=".24" />
+          <circle cx="460" cy="520" r="1.1" opacity=".2" />
+          <circle cx="820" cy="560" r="1.4" opacity=".18" />
+          <circle cx="1500" cy="540" r="1.3" opacity=".2" />
+        </g>
+        <g class="ruins-embers" fill="#ff9a58">
+          <circle cx="340" cy="500" r="2" opacity=".5" />
+          <circle cx="510" cy="620" r="1.5" opacity=".4" />
+          <circle cx="960" cy="520" r="2.2" opacity=".45" />
+          <circle cx="1120" cy="600" r="1.6" opacity=".4" />
+          <circle cx="1460" cy="470" r="1.8" opacity=".35" />
+          <circle cx="760" cy="700" r="1.4" opacity=".3" />
+        </g>
+      </svg>
+    </div>
 
   <div id="app">
     <header class="topbar">
@@ -9529,7 +10060,7 @@ header.topbar {
   <div class="modal-root" id="modal-root"></div>
   <div class="toast-root" id="toast-root"></div>
   <script type="module">
-/* Emberfall · 单文件构建 · 2026-11-22T15:05:20.019Z */
+/* Emberfall · 单文件构建 · 2026-11-22T15:14:05.783Z */
 // ── js/engine/balance.js ──
 // 全局数值平衡表。所有成长公式集中在这里，方便模拟调参。
 
